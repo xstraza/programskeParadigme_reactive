@@ -1,0 +1,23 @@
+# Default — normalize line endings on commit, render with native line endings on checkout
+* text=auto eol=lf
+
+# Source files — always LF (cross-platform reproducibility)
+*.java   text eol=lf
+*.xml    text eol=lf
+*.md     text eol=lf
+*.txt    text eol=lf
+*.yml    text eol=lf
+*.yaml   text eol=lf
+*.json   text eol=lf
+*.properties text eol=lf
+.gitignore text eol=lf
+.gitattributes text eol=lf
+
+# Binary — never touch
+*.jar    binary
+*.pdf    binary
+*.png    binary
+*.jpg    binary
+*.jpeg   binary
+*.gif    binary
+*.zip    binary
