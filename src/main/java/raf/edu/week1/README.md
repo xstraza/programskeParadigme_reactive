@@ -347,15 +347,57 @@ Tabela poređenja sva tri:
 
 ## 5. Reactive Streams specifikacija
 
-**Reactive Streams** je standard razvijen 2013-2015. od strane Netflix-a,
-Pivotal-a, Lightbend-a i drugih (postao je deo JDK od Jave 9 kao
-`java.util.concurrent.Flow`). Definiše **četiri interfejsa** i set
-**pravila** koje implementacija mora da poštuje.
+### Kratka priča: zašto je standard uopšte nastao
 
-Bitno je razumeti motivaciju: pre 2015. svaka biblioteka (Akka, RxJava,
-Reactor) je imala svoj API. Nisu se mogli mešati. Reactive Streams
-specifikacija je dogovorila *minimum* tako da različite implementacije
-mogu da razgovaraju.
+Vratimo se u 2013. Reaktivno programiranje na JVM-u tada već postoji,
+ali **svaka biblioteka ima svoj API**:
+
+- **RxJava** (Netflix) emituje preko `Observable<T>` sa `subscribe(Observer)`.
+- **Akka Streams** (Lightbend) ima svoj `Source<T, Mat>` sa drugačijim
+  lifecycle-om.
+- **Reactor** (Pivotal/Spring) je tek u nastanku, sa svojim `Flux` i `Mono`.
+- Ulaz/izlaz biblioteke (npr. baza, mreža) - ko zna kako su realizovane.
+
+Problem: ako nam jedna biblioteka daje `Observable`, a druga očekuje
+`Source`, **moramo ručno da prevodimo**. Plus svaka ima svoju varijantu
+backpressure-a, svoju semantiku za grešku, svoj način da ih pomeriš
+između niti. Dva tima koja koriste različite biblioteke ne mogu
+direktno da povežu kod.
+
+Inženjeri iz Netflix-a, Lightbend-a, Pivotal-a, Red Hat-a, Twitter-a
+i drugih su 2013. seli i napravili **minimum dogovor** - četiri
+interfejsa i ~30 pravila. **Final 1.0 specifikacija** je objavljena
+2015. Naredne godine Java 9 (JEP 266) je *inkorporirala iste interfejse*
+u JDK pod `java.util.concurrent.Flow`.
+
+> **Pouka:** Reactive Streams **nije** biblioteka. To je *kontraktni
+> minimum* - dovoljno da različite biblioteke mogu da razgovaraju,
+> ne više. Pravu funkcionalnost (operatori, schedulers) dobijaš tek
+> uz Reactor / RxJava / Akka.
+
+### Mentalni model: lifecycle kao telefonski poziv
+
+Pre formalnih definicija, jedna analogija. Cela komunikacija između
+Publisher-a i Subscriber-a liči na telefonski poziv:
+
+| Korak telefonskog poziva                                 | Reactive Streams signal |
+|----------------------------------------------------------|------------------------|
+| Biraš broj (`subscribe`)                                 | `publisher.subscribe(subscriber)` |
+| Druga strana se javi                                     | `onSubscribe(subscription)` |
+| Subscription je "kontrola" - reci "spusti", "zovi nazad" | `subscription.request(n)` / `subscription.cancel()` |
+| Razgovor traje                                           | `onNext(elem)` više puta |
+| Neko spusti slušalicu lepo                               | `onComplete()` |
+| Veza pukne (greška)                                      | `onError(throwable)` |
+| Nakon spuštanja, ne možete više da pričate               | nema više signala posle terminalnog |
+
+Kada Subscriber kaže `subscription.request(5)`, to je kao da je rekao
+"može da mi pričaš još 5 rečenica, posle toga čekaj". Publisher tačno
+zna granicu - ne sme da gurne 6. tu rečenicu pre nego što stigne novi
+`request()`.
+
+Ovo je ceo protokol. Sve ostalo (`map`, `filter`, `merge`, `zip`...) je
+sintaksa nad ovim - operatori implementiraju i Publisher i Subscriber
+istovremeno (zato `Processor`).
 
 ### Četiri interfejsa
 
@@ -435,7 +477,79 @@ Flow API bogatim setom operatora i schedulera.
 ## 7. Stream API vs. Reaktivni stream
 
 Iako liče po sintaksi, **Stream** i **Flux/Mono** rešavaju različite
-probleme. Tabela rezimira ključne razlike:
+probleme. Najlakše se to vidi kroz dva paralelna scenarija - jedan
+prirodno odgovara Stream-u, drugi prirodno odgovara Flux-u.
+
+### Scenario A: analiza log fajla (Stream)
+
+Imamo `app.log` od 200 MB. Cilj: prebrojati koliko je `ERROR` linija
+upisano *danas*.
+
+```java
+String today = LocalDate.now().toString();
+
+long brojGresaka = Files.lines(Path.of("app.log"))
+        .filter(line -> line.contains("ERROR"))
+        .filter(line -> line.startsWith(today))
+        .count();
+
+System.out.println("Greški danas: " + brojGresaka);
+```
+
+Karakteristike ovog scenarija:
+
+- Podaci su **već svi tu** - fajl postoji na disku.
+- Operacija ima **kraj** - kad pročitamo poslednji red, gotovo.
+- Tempo diktira **terminalna operacija** (`count()` "vuče" red po red).
+- Sve se odvija na **jednoj niti**.
+- Greška = izuzetak (npr. `IOException`).
+
+To je **pull**, sinhrono, jedna nit. **Stream je tu kralj** -
+reaktivno bi bilo overkill.
+
+### Scenario B: live alert na cenu akcija (Flux)
+
+Drugi scenario: brokerska aplikacija. Cilj: kad cena AAPL pređe $200,
+pošalji push notifikaciju, ali ne više od 1× u 5 minuta.
+
+```java
+brokerage.priceStream("AAPL")                          // Flux<Cena> - emituje cenu na svaki tick
+        .filter(cena -> cena.amount() > 200.00)        // samo cene preko praga
+        .sample(Duration.ofMinutes(5))                 // ne više od 1 alarma u 5 min
+        .map(cena -> "AAPL = $" + cena.amount())
+        .doOnError(err -> log.error("Stream pukao", err))
+        .retryWhen(Retry.backoff(3, Duration.ofSeconds(2)))
+        .subscribe(notifikacijeServis::posalji);
+```
+
+Karakteristike ovog scenarija:
+
+- Podaci **stižu kroz vreme** - svaki tick na berzi je nova emisija.
+- Tok **nema kraj** dok je berza otvorena.
+- Tempo diktira **berza** (push) - aplikacija samo prati.
+- Mora postojati `subscribe()` da bi se išta desilo.
+- **Vreme je deo logike** - `sample(5min)` koristi vreme kao
+  prvoklasni operator.
+- Greška je **signal u toku** (`onError`), ne izuzetak.
+
+To je **push**, asinhrono, scheduler bira nit. Stream ovo **ne ume** -
+nema vremensku semantiku, terminalna operacija bi blokirala zauvek.
+
+### Šta uče oba scenarija
+
+Operatori `filter`, `map`, `count` *imaju isto značenje* u oba sveta -
+to je pedagoški most. Razlika je u **kontekstu**:
+
+| Pitanje | Stream odgovor | Flux odgovor |
+|---------|----------------|---------------|
+| Imaju li podaci kraj? | da | ne mora |
+| Ko diktira tempo? | terminalna operacija (pull) | izvor (push) sa `request(n)` |
+| Kad se izvršava? | čim se pozove terminalna | čim se pozove `subscribe()` |
+| Vreme između elemenata | nije pojam | prvoklasni pojam |
+| Greška | bačeni izuzetak | signal `onError` |
+| Nit | nit poziva | scheduler bira |
+
+### Detaljna tabela razlika
 
 | Aspekt | `Stream<T>` (FP deo) | `Flux<T>` / `Mono<T>` (reaktivno) |
 |--------|----------------------|-----------------------------------|
@@ -499,18 +613,88 @@ Flux.just(1, 2, 3, 4)
 
 ### Zamke koje treba pomenuti odmah
 
-> **Zamka 1:** `subscribe()` se *mora pozvati* da bi se išta desilo.
+Svaka zamka ovde dolazi iz neke realne situacije iz produkcije ili sa
+prošlih generacija ovog kursa. Pamtite ih sa pričom, ne sa pravilom.
+
+#### Zamka 1: zaboravljen `subscribe()`
+
+```java
+http.get("/me")
+    .map(this::parsujProfil)
+    .doOnNext(this::sacuvajUKes);   // <-- zaboravljen .subscribe()
+```
+
+> **Pravilo:** `subscribe()` se *mora pozvati* da bi se išta desilo.
 > Mono/Flux su **lenji** - sastavljanje pipeline-a je samo nacrt.
 
-> **Zamka 2:** Blokirati u operatoru (`Thread.sleep`, sinhroni I/O,
+> **Incident:** Junior developer je proveo dva sata debug-ujući zašto
+> mu se metoda *ne poziva*. Lambda u `.map(...)` se nikad nije
+> izvršila. Rešenje je bilo dodavanje `.subscribe()` na kraju.
+> Mono/Flux nisu kao `CompletableFuture` - oni *čekaju* da im neko
+> kaže "kreni".
+
+#### Zamka 2: blokiranje u operatoru
+
+```java
+flux.map(id -> {
+    return restTemplate.getForObject("/users/" + id, User.class);  // SINHRONI HTTP poziv!
+});
+```
+
+> **Pravilo:** blokirati u operatoru (`Thread.sleep`, sinhroni I/O,
 > `block()` unutar `map`) je gotovo uvek bug - blokirate nit
 > schedulera koji nije za to namenjen.
 
-> **Zamka 3:** Side-effects pripadaju u `doOnNext` / `doOnError` /
+> **Incident:** Production server u 3 ujutro počeo da odgovara po 30
+> sekundi. Uzrok: neko je stavio sinhroni `restTemplate.getForObject`
+> unutar `.map(...)` na `Schedulers.parallel()` - schedulera koji ima
+> tačno onoliko niti koliko ima CPU-jezgara. Sve niti su istovremeno
+> bile blokirane na sinhrone HTTP pozive. Server *nije bio
+> preopterećen* - jednostavno više nije imao slobodne niti za rad.
+> Lek: koristi `WebClient` (asinhron) ili prebaci na
+> `Schedulers.boundedElastic()` koji je za blokirajuće pozive.
+
+#### Zamka 3: side-effect u `map`
+
+```java
+flux.map(user -> {
+    posaljiEmail(user);              // <-- side effect ne pripada ovde
+    return user.getEmail();
+})
+.retry(3);                            // <-- ako padne, email ide ponovo
+```
+
+> **Pravilo:** side-effects pripadaju u `doOnNext` / `doOnError` /
 > `doOnSubscribe`, **ne** u `map`. `map` mora biti **čista funkcija**.
 
-> **Zamka 4:** Test sa `Thread.sleep` je flaky. Koristi `StepVerifier`
+> **Incident:** QA je prijavio da neki korisnici dobiju isti email *četiri
+> puta*. Ispostavilo se da je `posaljiEmail` bio u `.map(...)`, a sa
+> `.retry(3)` se ceo pipeline ponavljao na grešku - svaki retry je
+> ponovo poslao email. Lek: `.doOnNext(this::posaljiEmail).map(User::getEmail)`.
+> `doOnNext` *eksplicitno tvrdi* "ovde je side-effect" - i lakše je
+> uočiti gde retry boli.
+
+#### Zamka 4: test sa `Thread.sleep`
+
+```java
+@Test
+void emisija() {
+    var rezultati = new ArrayList<>();
+    flux.subscribe(rezultati::add);
+    Thread.sleep(100);                    // <-- "valjda stigne za 100ms"
+    assertEquals(3, rezultati.size());
+}
+```
+
+> **Pravilo:** test sa `Thread.sleep` je flaky. Koristi `StepVerifier`
 > i `VirtualTimeScheduler` (videćemo u nedeljama koje dolaze).
+
+> **Incident:** CI build pukao 1 od 50 puta sa "expected 3, got 2".
+> Lokalno je test prošao 100/100 puta. Razlog: na sporom CI runner-u
+> 100ms ponekad nije bilo dovoljno - emisije nisu sve stigle pre nego
+> što je `assertEquals` izvršen. `StepVerifier.create(flux)
+> .expectNextCount(3).verifyComplete()` rešava deterministički, bez
+> realnog vremena.
 
 ---
 
@@ -553,6 +737,7 @@ Flux.range(1, 10)
 | [`PushVsPullModel.java`](PushVsPullModel.java) | Pull (Iterator) vs. push (callback / Observer) - konceptualna ilustracija |
 | [`ReactiveStreamsSpecification.java`](ReactiveStreamsSpecification.java) | Ručna implementacija `Publisher` / `Subscriber` / `Subscription` (Flow API) |
 | [`JavaFlowApiDemo.java`](JavaFlowApiDemo.java) | `SubmissionPublisher` i Flow.Subscriber u akciji - runnable primer |
+| [`BlockingVsNonBlocking.java`](BlockingVsNonBlocking.java) | Era 2 vs. Era 4 u brojevima - peak broj niti i vreme za 100 paralelnih poziva |
 | [`StreamVsReactive.java`](StreamVsReactive.java) | Isti pipeline kao `Stream<T>` i kao `Flux<T>` - razlika u ponašanju |
 | [`Introduction.java`](Introduction.java) | "Hello reactive world" sa Project Reactor-om - sneak peek za nedelju 2 |
 
