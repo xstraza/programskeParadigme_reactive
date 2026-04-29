@@ -5,53 +5,163 @@
 
 ## Sadržaj
 
-1. [Zašto reaktivno programiranje?](#1-zašto-reaktivno-programiranje)
-2. [Push vs. Pull model](#2-push-vs-pull-model)
-3. [Reactive Streams specifikacija](#3-reactive-streams-specifikacija)
-4. [Java Flow API - most ka Reactive Streams](#4-java-flow-api--most-ka-reactive-streams)
-5. [Stream API vs. Reaktivni stream](#5-stream-api-vs-reaktivni-stream)
-6. [Prednosti i zamke reaktivnog pristupa](#6-prednosti-i-zamke-reaktivnog-pristupa)
-7. [Šta dolazi sledeće - Project Reactor](#7-šta-dolazi-sledeće--project-reactor)
-8. [Primeri koda](#8-primeri-koda)
+1. [Priča za početak: ekran sa tri izvora](#1-priča-za-početak-ekran-sa-tri-izvora)
+2. [Evolucija: kako smo došli dovde](#2-evolucija-kako-smo-došli-dovde)
+3. [Šta je reaktivno programiranje](#3-šta-je-reaktivno-programiranje)
+4. [Push vs. Pull model](#4-push-vs-pull-model)
+5. [Reactive Streams specifikacija](#5-reactive-streams-specifikacija)
+6. [Java Flow API - vesa sa Reactive Streams](#6-java-flow-api---vesa-sa-reactive-streams)
+7. [Stream API vs. Reaktivni stream](#7-stream-api-vs-reaktivni-stream)
+8. [Prednosti i zamke reaktivnog pristupa](#8-prednosti-i-zamke-reaktivnog-pristupa)
+9. [Šta dolazi sledeće - Project Reactor](#9-šta-dolazi-sledeće---project-reactor)
+10. [Primeri koda](#10-primeri-koda)
 
 ---
 
-## 1. Zašto reaktivno programiranje?
+## 1. Priča za početak: ekran sa tri izvora
 
-U prvoj polovini semestra naučili smo **funkcionalno programiranje** u Javi:
-lambda izraze, Stream API, `Optional`, kompoziciju funkcija. Stream API je
-moćan alat - ali ima jedno ograničenje:
+Pre nego što išta definišemo, hajde da uđemo u jednu konkretnu situaciju.
+Pravimo mobilnu aplikaciju, sličnu Twitteru ili Instagramu. Korisnik
+otvori ekran sa svojim feed-om, i tu treba da se prikaže:
 
-> **Stream radi nad podacima koji već postoje u memoriji.** Operacije
-> su sinhrone, blokirajuće i pull-bazirane (terminalna operacija
-> "vuče" elemente jedan po jedan).
+- **profil korisnika** (ime, slika, broj pratilaca) - jedan REST poziv
+- **lista poslednjih 10 postova** - drugi REST poziv ka backend-u
+- **broj like-ova i komentara za svaki post** - po dva dodatna poziva po
+  postu, dakle 20 poziva ukupno
 
-A šta sa podacima koji **dolaze tokom vremena**? Šta sa pozivima ka
-mreži, bazi, fajlu, ili event stream-om sa korisničkog interfejsa? Tu
-klasični Stream postaje nezgodan - ili ćemo blokirati nit dok čekamo,
-ili ćemo žonglirati sa `CompletableFuture`, `Future`, callback-ovima,
-i veoma brzo upadati u **callback hell**.
+To je 22 nezavisna poziva ka serveru. Svaki traje neko realno vreme:
 
-### Problem 1: blokirajući I/O
+| Poziv | Tipično vreme |
+|-------|---------------|
+| `/me` | 200 ms |
+| `/me/posts` | 300 ms |
+| `/likes/{id}` (×10) | 50 ms svaki |
+| `/comments/{id}` (×10) | 50 ms svaki |
+
+### Naivno (sinhrono) rešenje
+
+Ako bismo to napisali "kao što smo navikli" - jedno za drugim:
 
 ```java
-// Klasičan blokirajući stil - nit "spava" dok čeka odgovor
-String odgovor = httpKlijent.GET("https://api.example.com/users");
+String profil = http.get("/me");                     // 200 ms
+List<Post> postovi = http.get("/me/posts");          // 300 ms
+for (Post p : postovi) {
+    p.likes = http.get("/likes/" + p.id);            // 10 × 50 = 500 ms
+    p.comments = http.get("/comments/" + p.id);     // 10 × 50 = 500 ms
+}
+prikaziUI(profil, postovi);
+```
+
+Ukupno vreme: **200 + 300 + 500 + 500 = 1500 ms**.
+
+Korisnik gleda u prazan ekran 1.5 sekunde pre nego što išta vidi.
+Aplikacija deluje sporo iako svaki *pojedinačni* poziv traje
+sasvim normalno.
+
+### Šta bismo *želeli*
+
+Pošto su pozivi međusobno nezavisni - mogli bi da idu **paralelno**:
+
+```
+profil i postovi  ────────────────▶  max(200, 300) = 300 ms
+       ↓
+likes svih 10 i komentari svih 10 paralelno ─▶  ~ 50 ms
+       ↓
+prikaz UI-ja
+```
+
+Sa paralelizacijom: **~ 350 ms**, više nego 4x brže. A to je samo *minimum*
+- realan UX traži još više:
+
+- prikaz "skeleton" loading state-a dok podaci stižu
+- automatski **retry** ako neki poziv padne (mreža je nepouzdana)
+- **timeout** ako server ne odgovori za 2 sekunde
+- **paginacija** dok korisnik skroluje
+- **cancel** ako korisnik napusti ekran pre nego što sve stigne
+
+Klasični sinhroni model **ne ume** ništa od ovoga lepo. Svaki poziv
+zauzima čitavu nit dok čeka odgovor; logika za retry / timeout /
+cancel se razbacuje po listenerima i `try/catch` blokovima.
+
+> Reaktivno programiranje je **alat napravljen baš za ovaj scenario**:
+> komponovanje više asinhronih izvora podataka kroz vreme, sa otpornošću
+> i kontrolom resursa.
+
+Hajde sad da vidimo *kako smo došli* do tog alata - jer on nije pao s neba.
+
+---
+
+## 2. Evolucija: kako smo došli dovde
+
+Reaktivno programiranje nije revolucija već *evolutivni odgovor* na
+probleme koje smo sretali u svakom prethodnom modelu konkurencije.
+Sledeća četiri "doba" pokazuju put.
+
+### Era 1: jedna nit, sinhrono blokiranje
+
+Najstariji model - sve radi jedna nit, blokirajući I/O.
+
+```java
+String odgovor = http.get("https://api.example.com/users");  // <- nit "spava" 200ms
 List<User> users = parsiraj(odgovor);
 ```
 
-Dok čekamo odgovor, čitava nit je **zauzeta** i ne radi ništa korisno.
-Web server koji obrađuje 10.000 konkurentnih veza klasičnim
-blokirajućim modelom mora da otvori 10.000 niti - što troši ogromno
-memorije (~1 MB stack po niti) i CPU vremena na context switching.
+Dok čekamo odgovor, **čitava nit je zauzeta i ne radi ništa korisno**.
+Ako server treba da opsluži još jednog klijenta paralelno - ne može,
+nit je blokirana.
 
-### Problem 2: callback hell
+**Problem:** ne skalira. Više klijenata = sporija aplikacija.
 
-Kad pređemo na asinhroni stil, dobijamo:
+### Era 2: nit po zahtevu
+
+Rešenje: za svaki dolazni zahtev, otvori novu nit. Tako klasičan
+Tomcat / servlet container radi.
 
 ```java
-// Pseudo-kod - asinhroni, ali nečitljiv
-httpKlijent.GETasync("/users", users -> {
+new Thread(() -> {
+    String odgovor = http.get("/me");
+    prikaziProfil(odgovor);
+}).start();
+```
+
+Bolje! Sad više klijenata radi paralelno.
+
+**Problem:** svaka JVM nit troši ~1 MB stack memorije i mrvi CPU
+kroz context switching. Web server koji obrađuje 10.000 konkurentnih
+veza klasičnim "thread-per-request" modelom mora da otvori 10.000 niti
+- to je ~10 GB samo za stack-ove. Plus sinhronizacija deljenog stanja
+između niti je teška i greškama sklona.
+
+> **Pravilo iz prakse:** niti su skupa apstrakcija. Treba da ih ima malo, i
+> treba da rade *stalno*, ne da spavaju na I/O.
+
+### Era 3: Future i CompletableFuture
+
+Java 5 dodaje `Future<T>`, Java 8 `CompletableFuture<T>` - asinhroni
+poziv koji *ne blokira* nit dok čeka rezultat.
+
+```java
+CompletableFuture<String> profil = http.getAsync("/me");
+profil.thenAccept(p -> prikaziProfil(p));
+```
+
+Mnogo bolje - ista nit može da radi nešto drugo dok server odgovara.
+
+Ali kad treba da *lančamo* više asinhronih operacija, dobijamo:
+
+```java
+http.getAsync("/me")
+    .thenCompose(profil -> http.getAsync("/posts/" + profil.id))
+    .thenCompose(postovi -> dohvatiLikesIComentare(postovi))
+    .thenApply(this::pripremiZaUI)
+    .exceptionally(this::prikaziGresku)
+    .thenAccept(this::prikaziUI);
+```
+
+Ili još gore, klasičan **callback hell**:
+
+```java
+http.getAsync("/me", users -> {
     for (User u : users) {
         bazaKlijent.findOrdersAsync(u.id, orders -> {
             for (Order o : orders) {
@@ -67,31 +177,105 @@ httpKlijent.GETasync("/users", users -> {
 Logika je razbacana po nivoima ugnežđavanja. Greška u jednom callback-u
 ne propagira automatski naviše. Testiranje je teško.
 
-### Rešenje: reaktivno programiranje
+**Šta još fali:**
 
-**Reaktivno programiranje** pruža apstrakciju nad asinhronim tokom
-podataka kroz vreme - istu kompozicionu eleganciju koju ima Stream
-API, ali nad **asinhronim, push-baziranim** izvorima:
+- `CompletableFuture<T>` predstavlja **tačno jednu** vrednost. A šta sa
+  *tokovima* - npr. lista postova koja stiže paginirana?
+- Nema **backpressure**-a - ako proizvođač gura brže nego što potrošač
+  može, podaci se gomilaju u memoriji.
+- Nema standardnih **operatora** za rad sa tokovima (`map`, `filter`,
+  `merge`, `zip`, `retry`, `timeout` - sve to bi morali ručno).
+
+### Era 4: Reactive Streams
+
+Generalizacija `CompletableFuture` na **tok od 0..N vrednosti** kroz
+vreme, sa backpressure-om i bogatim setom standardnih operatora -
+istih onih koje smo videli na `Stream`-u u prvoj polovini semestra.
 
 ```java
-// Kompozicija ostaje deklarativna, ali sve je asinhrono
-httpKlijent.get("/users")               // Mono<List<User>> ili Flux<User>
-    .flatMap(user -> bazaKlijent.findOrders(user.id))
-    .flatMap(order -> emailServis.send(order))
-    .doOnError(loger::error)
-    .subscribe();
+http.get("/me")                              // Mono<Profil>
+    .flatMap(profil ->                       // za svaki profil:
+        http.get("/posts/" + profil.id))     //   dovedi listu postova
+    .flatMap(post -> Mono.zip(               // za svaki post paralelno:
+        http.get("/likes/" + post.id),       //   dovedi like-ove
+        http.get("/comments/" + post.id)))   //   i komentare
+    .timeout(Duration.ofSeconds(2))          // ako traje > 2s, error
+    .retry(3)                                // pokušaj 3 puta na grešku
+    .subscribe(this::prikaziPost);           // tek sad sve "kreće"
 ```
 
-Ovo nije magija - ovo je `Stream` koji ume da se nosi sa **vremenom**.
+Pet-šest linija, sa retry-em, timeout-om i paralelizacijom uračunatim
+"besplatno". Sintaksa = `Stream` koji znamo iz prvog dela, **ali
+prošireni vremenom i asinhronošću**.
+
+Tabela rezimira put:
+
+| Era | Model | Problem koji ostaje |
+|-----|-------|---------------------|
+| 1 - sinhrono | jedna nit blokira na I/O | ne skalira |
+| 2 - thread per request | po nit za svaki zahtev | niti su skupe; sinhronizacija teška |
+| 3 - Future / Callback | asinhroni *jedan* rezultat | callback hell, nema tokova, nema backpressure-a |
+| 4 - Reactive Streams | asinhroni **tok 0..N**, sa kontrolom tempa | (ovo je gde smo sad) |
+
+Svaka era je rešavala problem prethodne. Reaktivno programiranje nije
+"alternativa OOP-u" - to je **konkurentnostni model**, sledeći korak u
+istoj liniji.
 
 ---
 
-## 2. Push vs. Pull model
+## 3. Šta je reaktivno programiranje
 
-Razlika između klasičnih kolekcija/stream-ova i reaktivnih tokova
-najčistije se vidi kroz pitanje "ko kontroliše tempo".
+Sada možemo dati definiciju koja je dovoljno precizna za ovaj kurs:
 
-### Pull model (klasičan)
+> **Reaktivno programiranje** je deklarativni stil rada sa
+> **asinhronim tokovima podataka kroz vreme**, sa backpressure-om
+> i kompozicijom operatora.
+
+Razložimo svaku reč:
+
+| Termin | Šta znači |
+|--------|-----------|
+| **deklarativni** | opisujemo *šta* želimo, ne *kako* (kao Stream API) |
+| **asinhroni** | ne blokiramo nit dok čekamo rezultat |
+| **tokovi (streams)** | sekvenca od 0..N vrednosti koja stiže kroz vreme |
+| **kroz vreme** | elementi NE moraju biti svi spremni unapred |
+| **backpressure** | potrošač kontroliše tempo da ga izvor ne preplavi |
+| **kompozicija operatora** | lančamo `map`, `filter`, `flatMap`, `merge`, `zip`... |
+
+### Šta reaktivno programiranje **nije**
+
+- Nije magija koja ubrzava CPU-bound poslove. Reactive ne ubrzava
+  računanje - ubrzava *čekanje*.
+- Nije zamena za FP iz prvog dela. **Gradi se nad FP-om** - operatori su
+  čiste funkcije, vrednosti su imutabilne.
+- Nije rešenje za sve. Mali sinhroni skript ili CPU intenzivan posao
+  *ne* treba da budu reaktivni - overhead je veći od koristi.
+- Nije nova paradigma za pamćenje od nule. Operatori (`map`, `filter`,
+  `flatMap`, `reduce`) imaju **isto značenje** kao na Stream-u.
+
+### Šta jeste
+
+Setimo se ekrana sa tri izvora iz sekcije 1. Reaktivno programiranje
+je **alat za baš taj problem**:
+
+- više nezavisnih I/O izvora
+- različite brzine (network je nepredvidljiv)
+- kombinacije (zip, merge, paralelno)
+- otpornost (timeout, retry, fallback)
+- kontrola resursa (jedna nit servisira hiljade konekcija)
+
+Ostatak nedelje gradi *minimalni mentalni model* tog alata:
+push umesto pull, signali, Subscription, backpressure. Od nedelje 2
+prelazimo na Project Reactor i pišemo realan kod.
+
+---
+
+## 4. Push vs. Pull model
+
+Najbrži način da se shvati razlika između klasičnih kolekcija i
+reaktivnih tokova je pitanje: **ko kontroliše tempo?**
+
+### Pull model - klijent vuče
 
 Klijent (potrošač) **vuče** podatke iz izvora kada je njemu zgodno:
 
@@ -103,12 +287,15 @@ Klijent (potrošač) **vuče** podatke iz izvora kada je njemu zgodno:
    ...
 ```
 
-Karakteristike:
-- Sinhrono, blokirajuće.
-- Potrošač kontroliše tempo - ako je spor, izvor "čeka".
-- Primer: `Iterator.next()`, `BufferedReader.readLine()`, `Stream.forEach()`.
+> **Analogija - supermarket:** uđeš u prodavnicu, uzmeš korpu, biraš
+> stvari sa polica svojim tempom. Polica te ne juri. *Ti diktiraš tempo.*
 
-### Push model (reaktivni)
+Karakteristike:
+- sinhrono, blokirajuće
+- potrošač kontroliše tempo - ako je spor, izvor "čeka"
+- primer: `Iterator.next()`, `BufferedReader.readLine()`, `Stream.forEach()`
+
+### Push model - izvor gura
 
 Izvor **gura** podatke ka potrošaču čim su dostupni:
 
@@ -119,31 +306,56 @@ Izvor **gura** podatke ka potrošaču čim su dostupni:
 [Izvor]  ──onComplete()──▶   [Potrošač]
 ```
 
+> **Analogija - restoran:** sediš za stolom, kuhinja šalje jelo kad
+> je gotovo. Ti ne kontrolišeš tačno kad stiže šta. Ako šef kuhinje
+> pošalje 5 jela odjednom, moraš nekako da se snađeš.
+
 Karakteristike:
-- Asinhrono.
-- Izvor kontroliše tempo - može biti "brži" od potrošača.
-- Mora imati mehanizam **backpressure**-a (kontrola da brz izvor ne
-  preplavi sporog potrošača).
-- Primer: GUI događaji, mrežni socket, sensor stream, event bus.
+- asinhrono
+- izvor kontroliše tempo - može biti "brži" od potrošača
+- mora postojati neki mehanizam **backpressure**-a (kontrola da brz
+  izvor ne preplavi sporog potrošača)
+- primer: GUI događaji, mrežni socket, sensor stream, event bus
 
-### Kombinacija - pull-push
+### Kombinacija - pull-push (Reactive Streams)
 
-Reactive Streams specifikacija zapravo kombinuje oba: **potrošač
-zahteva** koliko elemenata je spreman da primi (`request(n)`), pa
-**izvor gura** najviše toliko (`onNext`). Ovo je **dynamic
-backpressure** - push semantika sa pull kontrolom tempa.
+Reactive Streams specifikacija zapravo kombinuje oba:
+**potrošač zahteva** koliko elemenata je spreman da primi
+(`request(n)`), pa **izvor gura** najviše toliko (`onNext`). Ovo je
+**dynamic backpressure** - push semantika sa pull kontrolom tempa.
 
-> **Demo:** [`PushVsPullModel.java`](PushVsPullModel.java) ilustruje oba
-> modela paralelno, sa istim podacima.
+> **Analogija - novine sa pretplatom:** pretplatiš se na novine.
+> Stižu ti dnevno. Ako ideš na odmor, pošalješ poruku da
+> *pauziraju* - i pauziraju. Kad se vratiš, kažeš "nastavi". Možeš i
+> da otkažeš pretplatu.
+
+Tabela poređenja sva tri:
+
+| Aspekt | Pull (supermarket) | Naivni Push (restoran) | Reactive Streams (novine) |
+|--------|---------|---------|---------|
+| Ko diktira tempo | potrošač | izvor | potrošač - preko `request(n)` |
+| Šta ako je potrošač spor | izvor čeka | gomilanje, OOM | izvor staje dok potrošač ne traži |
+| Šta ako je izvor spor | potrošač blokira | potrošač čeka | potrošač čeka, ali ne blokira nit |
+| Sinhrono / async | sinhrono | async | async |
+| Primeri | `Iterator`, `Stream` | klasičan Observer, GUI | `Mono`, `Flux`, RxJava, Akka |
+
+> **Demo:** [`PushVsPullModel.java`](PushVsPullModel.java) ilustruje
+> pull i (naivni) push modela paralelno, sa istim podacima i sa malim
+> mini-operatorima (`map`, `filter`).
 
 ---
 
-## 3. Reactive Streams specifikacija
+## 5. Reactive Streams specifikacija
 
 **Reactive Streams** je standard razvijen 2013-2015. od strane Netflix-a,
 Pivotal-a, Lightbend-a i drugih (postao je deo JDK od Jave 9 kao
 `java.util.concurrent.Flow`). Definiše **četiri interfejsa** i set
 **pravila** koje implementacija mora da poštuje.
+
+Bitno je razumeti motivaciju: pre 2015. svaka biblioteka (Akka, RxJava,
+Reactor) je imala svoj API. Nisu se mogli mešati. Reactive Streams
+specifikacija je dogovorila *minimum* tako da različite implementacije
+mogu da razgovaraju.
 
 ### Četiri interfejsa
 
@@ -188,7 +400,7 @@ interfejsa, identične potpise, da bi standardna biblioteka mogla biti
 
 ---
 
-## 4. Java Flow API - vesa sa Reactive Streams
+## 6. Java Flow API - veza sa Reactive Streams
 
 `java.util.concurrent.Flow` je deo standardne biblioteke. Sadrži:
 
@@ -220,7 +432,7 @@ Flow API bogatim setom operatora i schedulera.
 
 ---
 
-## 5. Stream API vs. Reaktivni stream
+## 7. Stream API vs. Reaktivni stream
 
 Iako liče po sintaksi, **Stream** i **Flux/Mono** rešavaju različite
 probleme. Tabela rezimira ključne razlike:
@@ -263,7 +475,7 @@ Flux.just(1, 2, 3, 4)
 
 ---
 
-## 6. Prednosti i zamke reaktivnog pristupa
+## 8. Prednosti i zamke reaktivnog pristupa
 
 ### Kada reaktivno **pomaže**
 
@@ -302,7 +514,7 @@ Flux.just(1, 2, 3, 4)
 
 ---
 
-## 7. Šta dolazi sledeće - Project Reactor
+## 9. Šta dolazi sledeće - Project Reactor
 
 **Project Reactor** je biblioteka koja implementira Reactive Streams
 specifikaciju i dodaje:
@@ -334,7 +546,7 @@ Flux.range(1, 10)
 
 ---
 
-## 8. Primeri koda
+## 10. Primeri koda
 
 | Fajl | Tema |
 |------|------|
