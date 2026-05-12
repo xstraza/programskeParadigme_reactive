@@ -29,6 +29,8 @@ public class PracticeTasksForStudents {
         // zadatak6();
         // zadatak7();
         // zadatak8();
+        // zadatak9();
+        // zadatak10();
     }
 
     // ===================================================================
@@ -167,6 +169,45 @@ public class PracticeTasksForStudents {
     // tema nedelje 4 — sve je na jednoj niti.)
     // ===================================================================
     static void zadatak8() {
+        // TODO
+    }
+
+    // ===================================================================
+    // Zadatak 9 — expand za paginaciju API-ja
+    //
+    // Simuliraj API koji vraća stranice rezultata. Svaka stranica zna
+    // svoj broj i da li postoji sledeća. Napravi:
+    //
+    //   record Stranica(int broj, List<String> stavke, boolean imaSledecu) {}
+    //
+    //   Mono<Stranica> fetch(int broj)
+    //     - vrati Mono.just(new Stranica(broj, List.of("s" + broj + ".1", ...), broj < 3))
+    //     - sa delay 100ms
+    //
+    // Pomoću fetch(0) + expand, povuci sve stranice 0..3, sakupi
+    // sve "stavke" u jednu List<String> i ispiši.
+    //
+    // Bonus: ispiši "fetch stranice N" pre svake stranice da vidiš da
+    // se zaista poziva REDOM (ne paralelno).
+    // ===================================================================
+    static void zadatak9() {
+        // TODO
+    }
+
+    // ===================================================================
+    // Zadatak 10 — flatMapIterable
+    //
+    // Imaš Flux<List<Integer>>:
+    //   Flux.just(List.of(1,2,3), List.of(4), List.of(), List.of(5,6))
+    //
+    // Pomoću flatMapIterable, pretvori u Flux<Integer> i ispiši.
+    // Očekivani izlaz: 1, 2, 3, 4, 5, 6 (prazna lista se "preskoči").
+    //
+    // Probaj i sa flatMap + Flux.fromIterable — vidi da li je rezultat
+    // isti. (Jeste — ali flatMapIterable je čitkiji i ne pokreće
+    // unutrašnji Publisher.)
+    // ===================================================================
+    static void zadatak10() {
         // TODO
     }
 }

@@ -8,15 +8,16 @@
 
 ## Sadržaj
 
-1. [Uvod — šta je novo ove nedelje](#1-uvod--šta-je-novo-ove-nedelje)
+1. [Uvod](#1-uvod)
 2. [`flatMap`, `concatMap`, `flatMapSequential`](#2-flatmap-concatmap-flatmapsequential)
-3. [`switchMap` — autocomplete pattern](#3-switchmap--autocomplete-pattern)
-4. [`merge`, `concat`, `mergeSequential`](#4-merge-concat-mergesequential)
-5. [`zip`, `combineLatest`, `withLatestFrom`](#5-zip-combinelatest-withlatestfrom)
-6. [`buffer`, `window`, `groupBy`](#6-buffer-window-groupby)
-7. [Brza referenca — koji operator kada](#7-brza-referenca--koji-operator-kada)
-8. [Šta dolazi sledeće nedelje](#8-šta-dolazi-sledeće-nedelje)
-9. [Primeri koda i vežbe](#9-primeri-koda-i-vežbe)
+3. [Šira porodica: `flatMapMany`, `flatMapIterable`, `expand`](#3-šira-porodica-flatmapmany-flatmapiterable-expand)
+4. [`switchMap` — autocomplete pattern](#4-switchmap--autocomplete-pattern)
+5. [`merge`, `concat`, `mergeSequential`](#5-merge-concat-mergesequential)
+6. [`zip`, `combineLatest`, `withLatestFrom`, `Mono.when`, `firstWithValue`](#6-zip-combinelatest-withlatestfrom-monowhen-firstwithvalue)
+7. [`buffer`, `window`, `groupBy`](#7-buffer-window-groupby)
+8. [Brza referenca — koji operator kada](#8-brza-referenca--koji-operator-kada)
+9. [Šta dolazi sledeće nedelje](#9-šta-dolazi-sledeće-nedelje)
+10. [Primeri koda i vežbe](#10-primeri-koda-i-vežbe)
 
 ---
 
@@ -120,7 +121,74 @@ Bez `flatMap`-a, sa `map`-om, dobili bi `Flux<Mono<User>>` — tok
 
 ---
 
-## 3. `switchMap` — autocomplete pattern
+## 3. Šira porodica: `flatMapMany`, `flatMapIterable`, `expand`
+
+Tri "rođaka" `flatMap`-a koji popunjavaju česte rupe u praksi.
+
+### `flatMapMany` — `Mono<T>` → `Flux<R>`
+
+"Jedan poziv vrati listu — hoću svaki red kao zaseban element."
+
+```java
+Mono<HttpResponse> response = httpKlijent.get("/users");
+
+Flux<User> korisnici = response.flatMapMany(r -> Flux.fromIterable(r.items()));
+```
+
+Bez `flatMapMany`-ja morali bismo `.flatMap(r -> Flux.fromIterable(...))` —
+ali tip izlaza bi bio i dalje `Mono<Flux<...>>`. `flatMapMany` direktno
+"prebacuje" iz Mono u Flux svet.
+
+### `flatMapIterable` — `Flux<T>` sa `T = Iterable<R>` → `Flux<R>`
+
+Brži i čitljiviji nego `flatMap(x -> Flux.fromIterable(x))`. Sinhron,
+bez spinanja unutrašnjeg `Publisher`-a — tako da je idealan za
+"ravno prelivanje" stranica/listi.
+
+```java
+Flux<List<Item>> stranice = api.fetchStranice();
+
+Flux<Item> sviItemi = stranice.flatMapIterable(s -> s);
+```
+
+### `expand` — rekurzivno proširivanje
+
+Za svaki emitovani element pokrene **novi `Publisher`**, a njegove
+rezultate **ponovo razgranja**. Staje kad expander vrati prazan tok.
+
+#### Klasičan slučaj: paginacija API-ja
+
+```java
+Mono<Stranica> prva = api.fetchStranicu(0);
+
+Flux<Stranica> sve = prva.expand(s -> s.imaSledecu()
+        ? api.fetchStranicu(s.broj() + 1)
+        : Mono.empty());
+```
+
+`expand` će povući stranicu 0, emitovati je, pa pokrenuti
+`fetchStranicu(1)`, emitovati, pa `fetchStranicu(2)`... dok backend ne
+javi "nema više". Sve to bez ručnih while petlji ili rekurzivnih
+poziva.
+
+#### Drugi slučaj: BFS po stablu
+
+```java
+Flux.just(koren)
+    .expand(cvor -> Flux.fromIterable(cvor.deca()));
+```
+
+Idiom za rekurzivnu strukturu — kategorije sa pod-kategorijama, file
+system, DOM stablo.
+
+> ⚠️ `expandDeep` postoji kao DFS varijanta (depth-first); `expand` je
+> BFS (svi sa istog nivoa pre nego što se siđe niže).
+
+> **Demo:** [`FlatMapFamily.java`](FlatMapFamily.java)
+
+---
+
+## 4. `switchMap` — autocomplete pattern
 
 `switchMap` je rođak `flatMap`-a sa jednom ključnom razlikom:
 
@@ -171,7 +239,7 @@ u `doOnCancel` / `doFinally`.
 
 ---
 
-## 4. `merge`, `concat`, `mergeSequential`
+## 5. `merge`, `concat`, `mergeSequential`
 
 Spajanje **postojećih** `Flux`-eva (za razliku od `flatMap`-a, koji
 DINAMIČKI proizvodi unutrašnje tokove iz elemenata).
@@ -228,7 +296,7 @@ nikada ne pretplate. Za "ne odustaji na prvu grešku", postoji
 
 ---
 
-## 5. `zip`, `combineLatest`, `withLatestFrom`
+## 6. `zip`, `combineLatest`, `withLatestFrom`, `Mono.when`, `firstWithValue`
 
 Spajanje **vrednosti** iz više tokova u jedan rezultat (tuple ili
 korisnička funkcija).
@@ -283,6 +351,39 @@ Kad korisnik klikne Submit — uzmi trenutnu vrednost forme i pošalji.
 Bez `withLatestFrom`-a, morali bismo ručno da držimo poslednju
 vrednost forme.
 
+### `Mono.when` — "sačekaj sve, vrednosti ne zanimaju"
+
+Kao `zip`, ali ignoriše vrednosti — vraća `Mono<Void>` koji javlja
+`onComplete` tek kada **svi** izvori završe.
+
+```java
+Mono<Void> sviUpisi = Mono.when(
+        repo.upisi(a),
+        repo.upisi(b),
+        repo.upisi(c));   // paralelno; gotovo kad zadnji završi
+```
+
+Idealan za paralelno fire-and-forget: "izvrši sve ove async operacije,
+javi mi kad si gotov". Bez `Mono.when`-a, morali bismo `zip` pa
+`then()`, ili `flatMap` kombinacije.
+
+### `firstWithValue` — race, ko prvi taj prošao
+
+`Mono.firstWithValue(m1, m2, ...)` emituje **prvu vrednost** koja
+stigne iz bilo kog izvora; ostali se otkažu.
+
+```java
+Mono<Cena> brza = Mono.firstWithValue(
+        provajder1.cena(artikl),
+        provajder2.cena(artikl),
+        provajder3.cena(artikl));   // koji prvi odgovori, taj pobedi
+```
+
+Klasičan slučaj: **redundantni pozivi ka više DC-ova** za isti
+podatak — uzmi prvi koji stigne, ostatak zaboravi. Postoji i
+`Flux.firstWithSignal` za prvi koji emituje **bilo koji** signal
+(value ili error).
+
 ### Mini-poređenje
 
 | Operator | Kad emituje | Šta dobija |
@@ -290,12 +391,14 @@ vrednost forme.
 | `zip` | čim svi izvori imaju po novi element | tuple po jedan iz svakog |
 | `combineLatest` | čim BILO KOJI izvor emituje | tuple najnovijih svih |
 | `withLatestFrom` | čim GLAVNI izvor emituje | (glavni, last(drugi)) |
+| `Mono.when` | čim SVI završe | `Void` (samo signal) |
+| `firstWithValue` | čim PRVI emituje | vrednost prvog |
 
 > **Demo:** [`ZipCombineLatestDemo.java`](ZipCombineLatestDemo.java)
 
 ---
 
-## 6. `buffer`, `window`, `groupBy`
+## 7. `buffer`, `window`, `groupBy`
 
 Operatori koji **menjaju strukturu** toka — od pojedinačnih elemenata
 prave "paketiće" ili grupišu.
@@ -360,7 +463,7 @@ user-a idu redom.
 
 ---
 
-## 7. Brza referenca — koji operator kada
+## 8. Brza referenca — koji operator kada
 
 ### "Imam Flux, hoću za svaki element da pozovem async i da sakupim"
 
@@ -371,6 +474,14 @@ user-a idu redom.
 | brzo + redosled po ulazu | `flatMapSequential` |
 | samo poslednji ulaz nas zanima | `switchMap` |
 
+### "Imam Mono ili Flux<Iterable<T>> — kako da 'spljoštim'"
+
+| Šta želim | Operator |
+|-----------|----------|
+| Mono → Flux (lista u jednom pozivu) | `flatMapMany` |
+| Flux<List<T>> → Flux<T> (sinhrono) | `flatMapIterable` |
+| rekurzivno (paginacija, BFS po stablu) | `expand` / `expandDeep` |
+
 ### "Imam više postojećih Flux/Mono — kako da spojim"
 
 | Šta želim | Operator |
@@ -379,6 +490,8 @@ user-a idu redom.
 | jedan pa drugi pa treći (serijski) | `Flux.concat` |
 | paralelno ali rezultat redom izvora | `Flux.mergeSequential` |
 | čekam SVE, pa formiram kompozit | `Mono.zip` / `Flux.zip` |
+| čekam SVE, vrednosti ne trebaju | `Mono.when` |
+| ko prvi sa vrednošću, taj prošao | `Mono.firstWithValue` |
 | svaka promena bilo gde okida emit | `Flux.combineLatest` |
 | samo glavni okida, drugi je "state" | `withLatestFrom` |
 
@@ -394,7 +507,7 @@ user-a idu redom.
 
 ---
 
-## 8. Šta dolazi sledeće nedelje
+## 9. Šta dolazi sledeće nedelje
 
 Do sada smo komponovali tokove **bez razmišljanja o nitima**. Sve je
 "nekako radilo" — `delayElements` je pokretao `Schedulers.parallel`,
@@ -410,11 +523,12 @@ Do sada smo komponovali tokove **bez razmišljanja o nitima**. Sve je
 
 ---
 
-## 9. Primeri koda i vežbe
+## 10. Primeri koda i vežbe
 
 | Fajl | Tema |
 |------|------|
 | [`FlatMapVariants.java`](FlatMapVariants.java) | `flatMap` / `concatMap` / `flatMapSequential`, paralelizam i redosled |
+| [`FlatMapFamily.java`](FlatMapFamily.java) | `flatMapMany` / `flatMapIterable` / `expand` (paginacija, BFS) |
 | [`SwitchMapDemo.java`](SwitchMapDemo.java) | `switchMap` — autocomplete, cancellation signal |
 | [`MergeConcatDemo.java`](MergeConcatDemo.java) | `merge` / `concat` / `mergeSequential` / `startWith` |
 | [`ZipCombineLatestDemo.java`](ZipCombineLatestDemo.java) | `zip` / `combineLatest` / `withLatestFrom` |
