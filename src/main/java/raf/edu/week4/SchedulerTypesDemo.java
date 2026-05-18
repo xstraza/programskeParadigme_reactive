@@ -1,6 +1,7 @@
 package raf.edu.week4;
 
 import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Scheduler;
 import reactor.core.scheduler.Schedulers;
 
@@ -24,77 +25,106 @@ import java.time.format.DateTimeFormatter;
  *
  *   Schedulers.immediate()       - bez prebacivanja, radi tu gde si.
  *
- * Ovaj demo redom pušta isti tok na svakom scheduler-u i ispisuje
- * ime niti - tako se vidi razlika u praksi.
+ * Demo ima dva dela:
+ *
+ *   (A) Primer 1-2: kako se zovu niti svakog pool-a — samo da naučimo
+ *       da prepoznamo "parallel-3" / "boundedElastic-5" u logu.
+ *
+ *   (B) Primer 3-6: PONAŠAJNA razlika između pool-ova. Sa istim
+ *       flatMap pattern-om, vidimo da:
+ *         - parallel pool razdeli rad na N niti (parallel-1..N),
+ *         - boundedElastic isto (boundedElastic-1..M),
+ *         - single ostane na jednoj niti BEZ OBZIRA na flatMap,
+ *         - immediate uopšte ne prebacuje (sve na main).
  */
 public class SchedulerTypesDemo {
 
     private static final DateTimeFormatter HHMMSS = DateTimeFormatter.ofPattern("HH:mm:ss.SSS");
 
     public static void main(String[] args) {
-        System.out.println("=== 1. Default - bez ičega, ostaje na 'main' ===\n");
+        System.out.println("=== 1. Default - bez ičega, sve radi na 'main' ===\n");
         defaultBezScheduler();
 
-        System.out.println("\n=== 2. parallel - CPU pool, fiksan broj niti ===\n");
-        with(Schedulers.parallel(), "parallel");
+        System.out.println("\n=== 2. Imena niti - jedan tok pušten kroz svaki pool ===\n");
+        imenaNiti();
 
-        System.out.println("\n=== 3. boundedElastic - pool za blocking I/O ===\n");
-        with(Schedulers.boundedElastic(), "boundedElastic");
+        System.out.println("\n=== 3. parallel - flatMap razdeli posao na više parallel-X niti ===\n");
+        viseNitiNa(Schedulers.parallel(), "parallel");
 
-        System.out.println("\n=== 4. single - jedna nit, sve serijski ===\n");
-        with(Schedulers.single(), "single");
+        System.out.println("\n=== 4. boundedElastic - isti pattern za blocking I/O ===\n");
+        viseNitiNa(Schedulers.boundedElastic(), "elastic");
 
-        System.out.println("\n=== 5. immediate - nema prebacivanja niti ===\n");
-        with(Schedulers.immediate(), "immediate");
+        System.out.println("\n=== 5. single - i sa flatMap-om SVE ostaje na single-1 ===\n");
+        viseNitiNa(Schedulers.single(), "single");
 
-        System.out.println("\n=== 6. parallel ima FIKSAN broj niti, raspodela: ===\n");
-        parallelRaspodela();
+        System.out.println("\n=== 6. immediate - opt-out, čak ni flatMap ne prebacuje ===\n");
+        viseNitiNa(Schedulers.immediate(), "immediate");
+
+        log("info", "broj jezgara (parallel pool size) = " + Runtime.getRuntime().availableProcessors());
     }
 
     // -------------------------------------------------------------------
-    // Bez ijednog scheduler-a - sve radi na niti koja pozove subscribe.
-    // U main-u to je nit "main".
+    // (A) Default - Publisher ne pravi niti sam. Subscribe na main-u
+    //     znači da ceo lanac radi na main-u.
     //
-    // Pravilo: Publisher ne pravi niti sam od sebe. Tek operator koji
-    // ima vremensku dimenziju (delayElements, interval) ili eksplicitan
-    // subscribeOn/publishOn prebacuje nit.
+    // Pravilo: tek operator koji ima vremensku dimenziju (delayElements,
+    // interval) ili eksplicitan subscribeOn/publishOn prebacuje nit.
     // -------------------------------------------------------------------
     static void defaultBezScheduler() {
         Flux.range(1, 3)
                 .map(n -> n * 10)
-                .doOnNext(v -> log("default", v))
+                .doOnNext(v -> log("main", v))
                 .blockLast();
     }
 
     // -------------------------------------------------------------------
-    // Pomoćna metoda - isti tok, ali sa subscribeOn na zadatom scheduler-u.
-    // Ispisujemo ime niti za svaki element - to je jedini način da
-    // "vidimo" gde se rad zaista izvršava.
+    // (A) Samo da vidimo kako se zovu niti svakog pool-a. Sve četiri
+    //     varijante daju JEDNU nit jer je tok sekvencijalan - tok
+    //     pretplate uzme jednog worker-a iz pool-a i radi tu.
+    //
+    // Primeri 3-6 ispod pokazuju gde se vidi razlika u PONAŠANJU.
     // -------------------------------------------------------------------
-    static void with(Scheduler scheduler, String tag) {
-        Flux.range(1, 3)
-                .map(n -> n * 10)
+    static void imenaNiti() {
+        nazivPoola(Schedulers.parallel(), "parallel");
+        nazivPoola(Schedulers.boundedElastic(), "elastic");
+        nazivPoola(Schedulers.single(), "single");
+        nazivPoola(Schedulers.immediate(), "immediate");
+    }
+
+    static void nazivPoola(Scheduler scheduler, String tag) {
+        Flux.range(1, 2)
                 .subscribeOn(scheduler)
                 .doOnNext(v -> log(tag, v))
                 .blockLast();
     }
 
     // -------------------------------------------------------------------
-    // parallel ima broj niti = Runtime.availableProcessors().
-    // Sa flatMap koji svakom elementu daje DELAY na parallel pool-u,
-    // vidimo da se rad razdeli po nitima parallel-1, parallel-2, ...
+    // (B) Sad pravo testiranje pool-a. Pokrenemo 5 nezavisnih Mono-a
+    //     kroz flatMap. Svaki ima svoj subscribeOn na ISTOM pool-u.
     //
-    // Praktično: ako pokrenemo ovaj test sa 8 jezgara, dobićemo 8 niti
-    // parallel-1..parallel-8.
+    // Šta očekujemo:
+    //   parallel       -> 5 različitih niti parallel-1..parallel-5
+    //                     (pool ima dovoljno niti = broj jezgara)
+    //   boundedElastic -> 5 različitih niti boundedElastic-1..-5
+    //   single         -> SVE 5 na single-1 (po definiciji, samo 1 nit)
+    //   immediate      -> SVE 5 na main, jer immediate ne prebacuje
+    //
+    // pool je više od imena. Single garantuje
+    // serijski rad, immediate ne uvodi nikakvu nit, ostala dva
+    // paralelizuju.
+    //
+    // Stavili smo i Thread.sleep da 5 Mono-a stvarno preklope vreme -
+    // bez sleep-a, prvi bi mogao da završi pre nego drugi krene.
     // -------------------------------------------------------------------
-    static void parallelRaspodela() {
-        Flux.range(1, 8)
-                .flatMap(n -> Flux.just(n)
-                        .delayElements(Duration.ofMillis(50))    // delay → nit parallel-X
-                        .doOnNext(v -> log("rail", v)))
+    static void viseNitiNa(Scheduler scheduler, String tag) {
+        Flux.range(1, 5)
+                .flatMap(n -> Mono.fromCallable(() -> {
+                                    try { Thread.sleep(100); } catch (InterruptedException ignored) {}
+                                    return n;
+                                })
+                                .subscribeOn(scheduler))
+                .doOnNext(v -> log(tag, v))
                 .blockLast();
-
-        log("info", "broj jezgara = " + Runtime.getRuntime().availableProcessors());
     }
 
     static void log(String tag, Object value) {
