@@ -6,11 +6,11 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Nedelja 2 — osnovni operatori koji se PREKLAPAJU sa Stream API-jem.
+ * Nedelja 2 - osnovni operatori koji se PREKLAPAJU sa Stream API-jem.
  *
  * Glavna pouka: NE učimo nove pojmove, samo nove kontekste. Operatori
  * map / filter / take / skip / distinct / count / reduce / collectList
- * imaju identičnu semantiku kao u Stream-u — samo asinhronu.
+ * imaju identičnu semantiku kao u Stream-u - samo asinhronu.
  *
  * Demo paralelno pokazuje Stream verziju i Flux verziju, da se vidi
  * jedan-na-jedan preslikavanje.
@@ -23,7 +23,7 @@ import java.util.Map;
 public class OsnovniOperatori {
 
     public static void main(String[] args) {
-        System.out.println("=== 1. map / filter — najčešći par ===\n");
+        System.out.println("=== 1. map / filter - najčešći par ===\n");
         mapFilter();
 
         System.out.println("\n=== 2. take / skip ===\n");
@@ -57,7 +57,7 @@ public class OsnovniOperatori {
                 .toList();
         System.out.println("  [Stream]  " + izStream);
 
-        // Flux verzija — IDENTIČAN pipeline
+        // Flux verzija - IDENTIČAN pipeline
         Flux.just(1, 2, 3, 4, 5)
                 .filter(n -> n % 2 == 1)
                 .map(n -> n * n)
@@ -66,9 +66,9 @@ public class OsnovniOperatori {
     }
 
     // -------------------------------------------------------------------
-    // take(n) — uzmi prvih n elemenata, pa onComplete.
-    // skip(n) — preskoči prvih n.
-    // (Postoje i vremenske varijante — videti VremenskiOperatori.)
+    // take(n) - uzmi prvih n elemenata, pa onComplete.
+    // skip(n) - preskoči prvih n.
+    // (Postoje i vremenske varijante - videti VremenskiOperatori.)
     // -------------------------------------------------------------------
     static void takeSkip() {
         Flux.range(1, 10)
@@ -89,8 +89,8 @@ public class OsnovniOperatori {
     }
 
     // -------------------------------------------------------------------
-    // distinct — bez ijednog ponovljenog elementa u celom toku.
-    // distinctUntilChanged — bez UZASTOPNO ponovljenog. Razlika je važna
+    // distinct - bez ijednog ponovljenog elementa u celom toku.
+    // distinctUntilChanged - bez UZASTOPNO ponovljenog. Razlika je važna
     //   za npr. praćenje promene stanja: ako vrednost ostane ista,
     //   ne re-emituj.
     // -------------------------------------------------------------------
@@ -107,7 +107,7 @@ public class OsnovniOperatori {
     }
 
     // -------------------------------------------------------------------
-    // count / any / all — terminali koji vraćaju Mono.
+    // count / any / all - terminali koji vraćaju Mono.
     // -------------------------------------------------------------------
     static void countAnyAll() {
         Flux.range(1, 10)
@@ -124,8 +124,8 @@ public class OsnovniOperatori {
     }
 
     // -------------------------------------------------------------------
-    // reduce — emituje SAMO finalnu vrednost.
-    // scan   — emituje SVAKI međurezultat (prirodno za running totals).
+    // reduce - emituje SAMO finalnu vrednost.
+    // scan   - emituje SVAKI međurezultat (prirodno za running totals).
     //          Ovaj operator NE postoji na Stream-u.
     // -------------------------------------------------------------------
     static void reduceVsScan() {
@@ -140,7 +140,7 @@ public class OsnovniOperatori {
     }
 
     // -------------------------------------------------------------------
-    // collectList / collectMap — sakupi elemente u kolekciju i vrati Mono.
+    // collectList / collectMap - sakupi elemente u kolekciju i vrati Mono.
     // -------------------------------------------------------------------
     static void collect() {
         Flux.just("Ana", "Marko", "Petar")
@@ -153,7 +153,7 @@ public class OsnovniOperatori {
     }
 
     // -------------------------------------------------------------------
-    // sort — radi tek kada izvor završi (mora se sve videti pre sortiranja).
+    // sort - radi tek kada izvor završi (mora se sve videti pre sortiranja).
     // -------------------------------------------------------------------
     static void sort() {
         Flux.just(5, 2, 8, 1, 9, 3)

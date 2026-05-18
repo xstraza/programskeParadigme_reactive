@@ -8,22 +8,22 @@ import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 
 /**
- * Nedelja 3 — zip, combineLatest, withLatestFrom.
+ * Nedelja 3 - zip, combineLatest, withLatestFrom.
  *
  * Sve tri kombinuju vise tokova u jedan rezultat, ali NA RAZLICITE
- * NACINE — i ovo su upravo operatori "kojih nema u Stream API-ju" jer
+ * NACINE - i ovo su upravo operatori "kojih nema u Stream API-ju" jer
  * podrazumevaju vremensku semantiku.
  *
- *   zip               — saceka po JEDAN element iz SVAKOG izvora,
+ *   zip               - saceka po JEDAN element iz SVAKOG izvora,
  *                       spoji ih u tuple, emituje. Brzi izvor CEKA spori.
  *                       Kad neki izvor zavrsi, zip zavrsava.
  *
- *   combineLatest     — uvek emituje na svaki novi element BILO KOG
+ *   combineLatest     - uvek emituje na svaki novi element BILO KOG
  *                       izvora, koristeci NAJNOVIJE poznate vrednosti
  *                       iz ostalih. Pocinje tek kada SVAKI izvor jednom
  *                       emituje.
  *
- *   withLatestFrom    — instanca verzija "drugog izvora": glavni tok
+ *   withLatestFrom    - instanca verzija "drugog izvora": glavni tok
  *                       emituje normalno, drugi tok pratimo samo da
  *                       znamo njegovu poslednju vrednost. NE emitujemo
  *                       kad se drugi promeni.
@@ -42,30 +42,30 @@ public class ZipCombineLatestDemo {
     private static final DateTimeFormatter HHMMSS = DateTimeFormatter.ofPattern("HH:mm:ss.SSS");
 
     public static void main(String[] args) {
-        System.out.println("=== 1. zip — par po par, ceka sporiji ===\n");
+        System.out.println("=== 1. zip - par po par, ceka sporiji ===\n");
         zipBasic();
 
-        System.out.println("\n=== 2. zip — Promise.all pattern (paralelne async pozive) ===\n");
+        System.out.println("\n=== 2. zip - Promise.all pattern (paralelne async pozive) ===\n");
         zipPromiseAll();
 
-        System.out.println("\n=== 3. zip — razlicit broj elemenata ===\n");
+        System.out.println("\n=== 3. zip - razlicit broj elemenata ===\n");
         zipDifferentLengths();
 
-        System.out.println("\n=== 4. combineLatest — uvek najnovije iz svakog ===\n");
+        System.out.println("\n=== 4. combineLatest - uvek najnovije iz svakog ===\n");
         combineLatestDemo();
 
-        System.out.println("\n=== 5. withLatestFrom — glavni tok + uzgredna vrednost ===\n");
+        System.out.println("\n=== 5. withLatestFrom - glavni tok + uzgredna vrednost ===\n");
         withLatestFromDemo();
 
-        System.out.println("\n=== 6. zip vs combineLatest — jedan primer, dve semantike ===\n");
+        System.out.println("\n=== 6. zip vs combineLatest - jedan primer, dve semantike ===\n");
         zipVsCombineLatest();
     }
 
     // -------------------------------------------------------------------
-    // zip — parovi (1,A), (2,B), (3,C). Brzi izvor CEKA spori.
+    // zip - parovi (1,A), (2,B), (3,C). Brzi izvor CEKA spori.
     //
     // Bitno: zip emituje TEK KADA imaju SVI izvori bar jedan elem.
-    // Sledeca emisija — tek kad SVI imaju jos jedan, itd.
+    // Sledeca emisija - tek kad SVI imaju jos jedan, itd.
     // -------------------------------------------------------------------
     static void zipBasic() {
         Flux<Integer> brojevi = Flux.just(1, 2, 3)
@@ -79,11 +79,11 @@ public class ZipCombineLatestDemo {
     }
 
     // -------------------------------------------------------------------
-    // Promise.all pattern — pokreni N nezavisnih async poziva paralelno,
+    // Promise.all pattern - pokreni N nezavisnih async poziva paralelno,
     // saceka SVE, zatim formiraj kompozitni rezultat.
     //
     // Bez zip-a: morali bismo da pravimo lance flatMap-ova ili
-    // skupljamo CompletableFuture-e — gubimo deklarativnost.
+    // skupljamo CompletableFuture-e - gubimo deklarativnost.
     // -------------------------------------------------------------------
     static void zipPromiseAll() {
         Mono<String> userProfile = simAsync("user-profile", 200);
@@ -117,7 +117,7 @@ public class ZipCombineLatestDemo {
     }
 
     // -------------------------------------------------------------------
-    // combineLatest — emituje cim se BILO KOJI izvor promeni, koristeci
+    // combineLatest - emituje cim se BILO KOJI izvor promeni, koristeci
     // NAJNOVIJE vrednosti svih ostalih.
     //
     // Tipican UI primer: pretraga = (text + filter + sort).
@@ -136,7 +136,7 @@ public class ZipCombineLatestDemo {
     }
 
     // -------------------------------------------------------------------
-    // withLatestFrom — kao combineLatest, ali emisija se okida SAMO
+    // withLatestFrom - kao combineLatest, ali emisija se okida SAMO
     // kada se promeni GLAVNI tok. Drugi tok (state) samo "leti pored".
     //
     // Mini-pattern: tok klikova na dugme + tok trenutnih vrednosti
@@ -155,13 +155,13 @@ public class ZipCombineLatestDemo {
     }
 
     // -------------------------------------------------------------------
-    // Direktno poredjenje — isti ulazi, zip vs combineLatest.
+    // Direktno poredjenje - isti ulazi, zip vs combineLatest.
     //
     // tokA: 1 (na 100ms), 2 (na 200ms), 3 (na 300ms)
     // tokB: X (na 250ms)
     //
     // zip            : ceka par. Emituje (1, X) cim X stigne. Sledece bi
-    //                  bilo (2, ?) — ali B vise nema sta, zavrsi.
+    //                  bilo (2, ?) - ali B vise nema sta, zavrsi.
     // combineLatest  : ceka da OBA imaju bar jedan. Cim X stigne, emituje
     //                  (2, X) (jer je 2 stigao u 200ms, 1 vec zamenjen).
     //                  Onda na 3: (3, X).

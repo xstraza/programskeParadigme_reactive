@@ -5,7 +5,7 @@ import reactor.core.publisher.Flux;
 import java.time.Duration;
 
 /**
- * Nedelja 2 — Lifecycle, signali i doOn* hooks.
+ * Nedelja 2 - Lifecycle, signali i doOn* hooks.
  *
  * Svaki Subscriber prolazi kroz tačno ovaj redosled signala:
  *
@@ -16,13 +16,13 @@ import java.time.Duration;
  *     onComplete()  XOR  onError(...)  ← terminalni
  *
  * Reactor nam daje DVA načina da se "zakačimo":
- *   1. subscribe(...) — TERMINALNI; aktivira tok (bez subscribe — ništa).
- *   2. doOn* hooks    — međupozicije; ne aktiviraju tok, samo posmatraju.
+ *   1. subscribe(...) - TERMINALNI; aktivira tok (bez subscribe - ništa).
+ *   2. doOn* hooks    - međupozicije; ne aktiviraju tok, samo posmatraju.
  *
  * Demo pokriva:
  *   - varijante subscribe (od fire-and-forget do full Subscriber-a)
  *   - svaki doOn* hook redom
- *   - log() — zlatni alat za debug
+ *   - log() - zlatni alat za debug
  */
 public class LifecycleSignals {
 
@@ -36,7 +36,7 @@ public class LifecycleSignals {
         System.out.println("\n=== 3. doOnError vs doFinally vs doOnTerminate ===\n");
         terminalniHooks();
 
-        System.out.println("\n=== 4. doOnCancel — kad se subscriber otkaže ===\n");
+        System.out.println("\n=== 4. doOnCancel - kad se subscriber otkaže ===\n");
         cancelHook();
 
         System.out.println("\n=== 5. log() operator ===\n");
@@ -47,9 +47,9 @@ public class LifecycleSignals {
     // subscribe ima vise overload-a. Kreni od najjednostavnijeg.
     // -------------------------------------------------------------------
     static void subscribeVarijante() {
-        // (a) Bez ijednog handlera — fire-and-forget.
+        // (a) Bez ijednog handlera - fire-and-forget.
         Flux.just(1, 2, 3).subscribe();
-        System.out.println("  [a] subscribe() — bez handlera, ništa se ne ispiše");
+        System.out.println("  [a] subscribe() - bez handlera, ništa se ne ispiše");
 
         // (b) Samo onNext.
         Flux.just(1, 2, 3).subscribe(
@@ -72,8 +72,8 @@ public class LifecycleSignals {
                 err -> {},
                 ()  -> System.out.println("  [e] onComplete"),
                 sub -> {
-                    System.out.println("  [e] onSubscribe — tražim 2");
-                    sub.request(2);   // kontrolisani backpressure — uzimamo samo 2
+                    System.out.println("  [e] onSubscribe - tražim 2");
+                    sub.request(2);   // kontrolisani backpressure - uzimamo samo 2
                 });
     }
 
@@ -94,9 +94,9 @@ public class LifecycleSignals {
     // -------------------------------------------------------------------
     // Razlika: doOnError, doOnTerminate, doFinally.
     //
-    // doOnError      — samo na onError
-    // doOnTerminate  — onComplete ili onError (ali NE na cancel)
-    // doFinally      — uvek (i na cancel) sa SignalType-om
+    // doOnError      - samo na onError
+    // doOnTerminate  - onComplete ili onError (ali NE na cancel)
+    // doFinally      - uvek (i na cancel) sa SignalType-om
     // -------------------------------------------------------------------
     static void terminalniHooks() {
         Flux.<Integer>error(new IllegalStateException("simulirana"))
@@ -109,7 +109,7 @@ public class LifecycleSignals {
     }
 
     // -------------------------------------------------------------------
-    // doOnCancel — kad subscriber otkaže pre kraja.
+    // doOnCancel - kad subscriber otkaže pre kraja.
     // Pokrenemo beskonačan interval, uzmemo prvih 2, pa će se interval
     // CANCEL-ovati interno (jer take(2) otkaže izvor).
     // -------------------------------------------------------------------
@@ -123,7 +123,7 @@ public class LifecycleSignals {
     }
 
     // -------------------------------------------------------------------
-    // log() — automatski ispisuje SVE signale. Najbolji alat za debug.
+    // log() - automatski ispisuje SVE signale. Najbolji alat za debug.
     // Možemo ga staviti na više mesta u pipeline-u i videti šta gde
     // pristiže.
     // -------------------------------------------------------------------

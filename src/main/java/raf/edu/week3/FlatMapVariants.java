@@ -8,7 +8,7 @@ import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 
 /**
- * Nedelja 3 — flatMap, concatMap, flatMapSequential.
+ * Nedelja 3 - flatMap, concatMap, flatMapSequential.
  *
  * Sva tri operatora rade istu STVAR: za svaki element ulaznog toka
  * pozovu funkciju T → Publisher&lt;R&gt; (Mono ili Flux), dobiju "unutrašnji"
@@ -16,18 +16,18 @@ import java.time.format.DateTimeFormatter;
  *
  * Razlika je u tome KAKO se unutrašnji tokovi vode:
  *
- *   flatMap            — pretplati se na sve unutrašnje tokove ODMAH,
+ *   flatMap            - pretplati se na sve unutrašnje tokove ODMAH,
  *                        rezultati se INTERLEAVE-uju (redosled NIJE
  *                        garantovan). Maksimalan paralelizam.
  *
- *   concatMap          — sledeći unutrašnji tok ne počinje dok prethodni
+ *   concatMap          - sledeći unutrašnji tok ne počinje dok prethodni
  *                        ne završi. Redosled GARANTOVAN. Bez paralelizma.
  *
- *   flatMapSequential  — pretplati se odmah (kao flatMap), ali bafera
+ *   flatMapSequential  - pretplati se odmah (kao flatMap), ali bafera
  *                        rezultate i izlaže ih po redu ulaza. Redosled
  *                        garantovan + paralelizam.
  *
- * Ovo je SRCE reaktivne kompozicije — analog je flatMap-u nad
+ * Ovo je SRCE reaktivne kompozicije - analog je flatMap-u nad
  * Stream-om iz FP dela semestra, samo što unutra može da bude
  * asinhroni rad (HTTP poziv, baza, drugi reaktivni izvor).
  */
@@ -36,19 +36,19 @@ public class FlatMapVariants {
     private static final DateTimeFormatter HHMMSS = DateTimeFormatter.ofPattern("HH:mm:ss.SSS");
 
     public static void main(String[] args) {
-        System.out.println("=== 1. flatMap — async transform, interleaving ===\n");
+        System.out.println("=== 1. flatMap - async transform, interleaving ===\n");
         flatMapDemo();
 
-        System.out.println("\n=== 2. concatMap — serijski, redosled garantovan ===\n");
+        System.out.println("\n=== 2. concatMap - serijski, redosled garantovan ===\n");
         concatMapDemo();
 
-        System.out.println("\n=== 3. flatMapSequential — paralelno + redosled ===\n");
+        System.out.println("\n=== 3. flatMapSequential - paralelno + redosled ===\n");
         flatMapSequentialDemo();
 
-        System.out.println("\n=== 4. flatMap sa Mono — najčešći async pattern ===\n");
+        System.out.println("\n=== 4. flatMap sa Mono - najčešći async pattern ===\n");
         flatMapWithMono();
 
-        System.out.println("\n=== 5. flatMap vs map — zašto vraćaš Publisher ===\n");
+        System.out.println("\n=== 5. flatMap vs map - zašto vraćaš Publisher ===\n");
         flatMapVsMap();
 
         System.out.println("\n=== 6. concurrency parametar flatMap-a ===\n");
@@ -56,7 +56,7 @@ public class FlatMapVariants {
     }
 
     // -------------------------------------------------------------------
-    // flatMap — odmah pretplati sve unutrašnje tokove. Rezultati se
+    // flatMap - odmah pretplati sve unutrašnje tokove. Rezultati se
     // INTERLEAVE-uju onako kako stignu kroz vreme.
     //
     // Ovde svaki ulazni element 1..3 mapiramo u Flux koji emituje
@@ -71,7 +71,7 @@ public class FlatMapVariants {
     }
 
     // -------------------------------------------------------------------
-    // concatMap — RED PO RED. Sledeći unutrašnji tok počinje tek kada
+    // concatMap - RED PO RED. Sledeći unutrašnji tok počinje tek kada
     // prethodni završi (onComplete). Bez paralelizma.
     //
     // Koristi se kada redosled rezultata MORA da prati redosled ulaza:
@@ -88,7 +88,7 @@ public class FlatMapVariants {
     }
 
     // -------------------------------------------------------------------
-    // flatMapSequential — kompromis: pretplati se ODMAH (paralelizam),
+    // flatMapSequential - kompromis: pretplati se ODMAH (paralelizam),
     // ali bafera i izlaže rezultate U REDU PO ULAZU.
     //
     // Misli na njega kao "Promise.all" iz JS-a: pokreni sve, čekaj sve,
@@ -103,11 +103,11 @@ public class FlatMapVariants {
     }
 
     // -------------------------------------------------------------------
-    // flatMap u praksi — gotovo uvek ide iz T u Mono<R>.
+    // flatMap u praksi - gotovo uvek ide iz T u Mono<R>.
     //
     // Tipičan pattern: imamo Flux<UserId> i za svaki id treba da pozovemo
     // userService.findById(id) koji vraća Mono<User>. flatMap je upravo
-    // taj "spojnik" — bez njega bismo imali Flux<Mono<User>> (ugnježdeno!).
+    // taj "spojnik" - bez njega bismo imali Flux<Mono<User>> (ugnježdeno!).
     // -------------------------------------------------------------------
     static void flatMapWithMono() {
         Flux<Integer> userIds = Flux.just(101, 102, 103);
@@ -125,14 +125,14 @@ public class FlatMapVariants {
     }
 
     // -------------------------------------------------------------------
-    // flatMap vs map — zašto i kada šta.
+    // flatMap vs map - zašto i kada šta.
     //
     // map        : T → R          (sinhrona transformacija)
     // flatMap    : T → Mono<R>    (asinhrona transformacija)
     //              T → Flux<R>    (1 ulaz → 0..N izlaza)
     //
     // Pokušaj sa map-om gde treba flatMap: dobićeš Flux<Mono<User>>
-    // — tok koji emituje OBEĆANJA, ne korisnike. Treba ih "spljoštiti".
+    // - tok koji emituje OBEĆANJA, ne korisnike. Treba ih "spljoštiti".
     // -------------------------------------------------------------------
     static void flatMapVsMap() {
         // ANTI-PATTERN: map vraća Mono<User>; tip toka postaje Mono<Mono<...>>.
@@ -148,7 +148,7 @@ public class FlatMapVariants {
     }
 
     // -------------------------------------------------------------------
-    // flatMap ima drugi parametar — concurrency (max paralelnih unutrašnjih
+    // flatMap ima drugi parametar - concurrency (max paralelnih unutrašnjih
     // tokova). Default je 256 (Reactor konstanta Queues.SMALL_BUFFER_SIZE).
     //
     // Ako pravimo HTTP klijent koji ne sme da rastrgne udaljeni servis,
@@ -167,7 +167,7 @@ public class FlatMapVariants {
     }
 
     // -------------------------------------------------------------------
-    // Helper — log sa vremenom i niti.
+    // Helper - log sa vremenom i niti.
     // -------------------------------------------------------------------
     static void log(String tag, Object value) {
         System.out.printf("  [%s] %-22s on %-22s -> %s%n",

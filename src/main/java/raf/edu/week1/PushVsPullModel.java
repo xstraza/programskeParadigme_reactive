@@ -6,25 +6,25 @@ import java.util.List;
 import java.util.function.Consumer;
 
 /**
- * Nedelja 1 — Push vs. Pull model
+ * Nedelja 1 - Push vs. Pull model
  *
  * Cilj: konceptualno pokazati razliku između dva načina dostavljanja
  * podataka:
- *  1. PULL — potrošač sam vuče elemente kad mu je zgodno (Iterator).
- *  2. PUSH — izvor gura elemente potrošaču čim su dostupni
+ *  1. PULL - potrošač sam vuče elemente kad mu je zgodno (Iterator).
+ *  2. PUSH - izvor gura elemente potrošaču čim su dostupni
  *     (klasičan Observer pattern, prethodnica reaktivnog modela).
  *
- * Ovo nije prava reaktivna implementacija — već minimalni mentalni
+ * Ovo nije prava reaktivna implementacija - već minimalni mentalni
  * model. Pravi push sa backpressure-om vidimo u sledećim demo
  * klasama (Reactive Streams / Java Flow API).
  */
 public class PushVsPullModel {
 
     public static void main(String[] args) {
-        System.out.println("=== Pull model — Iterator vuče elemente ===\n");
+        System.out.println("=== Pull model - Iterator vuče elemente ===\n");
         pullModel();
 
-        System.out.println("\n=== Push model — Subject gura elemente ===\n");
+        System.out.println("\n=== Push model - Subject gura elemente ===\n");
         pushModel();
 
         System.out.println("\n=== Pseudo-reaktivni push sa kompozicijom ===\n");
@@ -32,7 +32,7 @@ public class PushVsPullModel {
     }
 
     // -----------------------------------------------------------------------
-    // Pull model — klasičan Iterator. Potrošač diktira tempo:
+    // Pull model - klasičan Iterator. Potrošač diktira tempo:
     //   "daj mi sledeći", "daj mi sledeći", ...
     // Ako je izvor spor, potrošač čeka. Ako je potrošač spor, izvor "čeka".
     // -----------------------------------------------------------------------
@@ -47,14 +47,14 @@ public class PushVsPullModel {
     }
 
     // -----------------------------------------------------------------------
-    // Push model — minimalni Subject. Potrošač se PRIJAVLJUJE,
+    // Push model - minimalni Subject. Potrošač se PRIJAVLJUJE,
     // a izvor mu kasnije gura elemente kad god ih ima. Tipičan Observer
     // pattern, dobro poznat iz GUI sveta (button click listener).
     // -----------------------------------------------------------------------
     static void pushModel() {
         Subject<String> izvor = new Subject<>();
 
-        // Pretplata — izvor sad zna ko sluša.
+        // Pretplata - izvor sad zna ko sluša.
         izvor.subscribe(grad -> System.out.println("[Push] Dobio: " + grad));
 
         // Izvor po svom tempu emituje elemente.
@@ -65,9 +65,9 @@ public class PushVsPullModel {
     }
 
     // -----------------------------------------------------------------------
-    // Pseudo-reaktivni push — Subject sa map operatorom.
+    // Pseudo-reaktivni push - Subject sa map operatorom.
     // Pokazuje da se isti operatori koje znamo iz Stream-a
-    // mogu napisati i nad push izvorom — to je suština reaktivnog modela.
+    // mogu napisati i nad push izvorom - to je suština reaktivnog modela.
     // -----------------------------------------------------------------------
     static void compositionPushModel() {
         Subject<Integer> brojevi = new Subject<>();
@@ -77,16 +77,16 @@ public class PushVsPullModel {
                 .filter(n -> n > 10)          // Predicate operator (kao Stream.filter)
                 .subscribe(n -> System.out.println("[Reactive-ish] Kvadrat > 10: " + n));
 
-        // Emisija — sad svaka emisija prolazi kroz pipeline.
+        // Emisija - sad svaka emisija prolazi kroz pipeline.
         for (int i = 1; i <= 6; i++) {
             brojevi.emit(i);
         }
     }
 
     // -----------------------------------------------------------------------
-    // Subject — minimalni push izvor sa operatorima.
+    // Subject - minimalni push izvor sa operatorima.
     // Nije Reactive Streams kompatibilan (nema backpressure ni
-    // onComplete / onError signale) — ali pokazuje ideju.
+    // onComplete / onError signale) - ali pokazuje ideju.
     // -----------------------------------------------------------------------
     static class Subject<T> {
         private final List<Consumer<T>> subscribers = new ArrayList<>();

@@ -1,23 +1,23 @@
-# Paradigme Programiranja — Nedelja 2
-## Project Reactor — `Mono` i `Flux`, kreiranje izvora, lifecycle, osnovni operatori
+# Paradigme Programiranja - Nedelja 2
+## Project Reactor - `Mono` i `Flux`, kreiranje izvora, lifecycle, osnovni operatori
 
 ---
 
 ## Sadržaj
 
-1. [Uvod — zašto Project Reactor](#1-uvod--zašto-project-reactor)
-2. [`Mono<T>` vs. `Flux<T>` — kada šta](#2-monot-vs-fluxt--kada-šta)
+1. [Uvod - zašto Project Reactor](#1-uvod--zašto-project-reactor)
+2. [`Mono<T>` vs. `Flux<T>` - kada šta](#2-monot-vs-fluxt--kada-šta)
 3. [Načini kreiranja izvora](#3-načini-kreiranja-izvora)
 4. [Lifecycle, signali i `doOn*` hooks](#4-lifecycle-signali-i-doon-hooks)
-5. [Osnovni operatori — preklapanje sa `Stream`-om](#5-osnovni-operatori--preklapanje-sa-stream-om)
+5. [Osnovni operatori - preklapanje sa `Stream`-om](#5-osnovni-operatori--preklapanje-sa-stream-om)
 6. [Operatori kojih nema u `Stream`-u (vremenski, fallback)](#6-operatori-kojih-nema-u-stream-u-vremenski-fallback)
-7. [`block()` — kad i zašto u demo kodu](#7-block--kad-i-zašto-u-demo-kodu)
+7. [`block()` - kad i zašto u demo kodu](#7-block--kad-i-zašto-u-demo-kodu)
 8. [Šta dolazi u nedelji 3](#8-šta-dolazi-u-nedelji-3)
 9. [Primeri koda i vežbe](#9-primeri-koda-i-vežbe)
 
 ---
 
-## 1. Uvod — zašto Project Reactor
+## 1. Uvod - zašto Project Reactor
 
 Prošle nedelje smo ručno implementirali `Publisher` i `Subscriber`
 koristeći `java.util.concurrent.Flow`, da vidimo kako protokol Reactive
@@ -33,17 +33,17 @@ specifikacija, ali nije dovoljno da se *pišu aplikacije*.
 - **utility** za kreiranje izvora iz različitih API-ja
   (`Future`, `Callable`, `Iterable`, mreža, ...).
 
-> Reactor je biblioteka koja pokriva sve to — implementira Reactive
+> Reactor je biblioteka koja pokriva sve to - implementira Reactive
 > Streams kontrakt i nadograđuje ga sa stotinama operatora. Sa
 > Reactor-om ne pišemo Subscriber-e ručno; pišemo deklarativni
 > pipeline.
 
 ```java
-// Sirov Flow API (week 1) — ručno
+// Sirov Flow API (week 1) - ručno
 Flow.Publisher<Integer> publisher = nasaImplementacija();
 publisher.subscribe(new Flow.Subscriber<>() { /* ~30 linija */ });
 
-// Project Reactor (week 2) — deklarativno
+// Project Reactor (week 2) - deklarativno
 Flux.range(1, 10)
     .filter(n -> n % 2 == 0)
     .map(n -> n * n)
@@ -51,15 +51,15 @@ Flux.range(1, 10)
 ```
 
 Sve što ćemo videti u nastavku semestra je nadogradnja nad ona četiri
-interfejsa iz prethodne nedelje — `Publisher`, `Subscriber`, `Subscription`,
+interfejsa iz prethodne nedelje - `Publisher`, `Subscriber`, `Subscription`,
 `Processor`. Reactor samo implementira specifikaciju produkciono
 spremno.
 
 ---
 
-## 2. `Mono<T>` vs. `Flux<T>` — kada šta
+## 2. `Mono<T>` vs. `Flux<T>` - kada šta
 
-Reactor ima **dva** glavna tipa izvora — i to namerno. Mogli su da imaju
+Reactor ima **dva** glavna tipa izvora - i to namerno. Mogli su da imaju
 samo jedan (kao RxJava `Observable<T>`), ali su odlučili da razdvoje
 0..1 od 0..N. Razlog je tipska tačnost: kompajler i čitač znaju da li
 ima najviše jedan element ili može biti više.
@@ -81,10 +81,10 @@ ima najviše jedan element ili može biti više.
 
 ### Kad birati `Flux<T>`
 
-- Tok od više vrednosti, makar i jedne — ali *načelno* više:
+- Tok od više vrednosti, makar i jedne - ali *načelno* više:
   - `userRepository.findAll()` → `Flux<User>`
   - WebSocket poruke → `Flux<Message>`
-  - `Flux.interval(...)` — beskonačan tok tikova
+  - `Flux.interval(...)` - beskonačan tok tikova
 - Kad ne znaš unapred koliko vrednosti dolazi.
 
 ### Konverzije između njih
@@ -106,7 +106,7 @@ Flux<Integer> kaoFlux = Mono.just(42).flux();
 
 ## 3. Načini kreiranja izvora
 
-Reactor ima desetine factory metoda. Većinu je dovoljno znati po imenu —
+Reactor ima desetine factory metoda. Većinu je dovoljno znati po imenu -
 kad zatreba, IDE auto-complete pokaže ostalo. Ovde sortirano po grupama
 po *vrsti* izvora, ne po API-ju.
 
@@ -114,8 +114,8 @@ po *vrsti* izvora, ne po API-ju.
 
 ```java
 Mono.just("zdravo");                          // Mono<String> sa jednom vrednošću
-Mono.justOrEmpty(null);                       // sigurnije od just(null) — pravi prazan Mono
-Mono.empty();                                 // Mono<Void> — odmah onComplete, bez vrednosti
+Mono.justOrEmpty(null);                       // sigurnije od just(null) - pravi prazan Mono
+Mono.empty();                                 // Mono<Void> - odmah onComplete, bez vrednosti
 Mono.error(new IOException("boom"));          // Mono koji odmah onError
 
 Flux.just(1, 2, 3, 4);                        // Flux<Integer> od 4 elementa
@@ -135,12 +135,12 @@ Flux.fromStream(imena.stream());              // iz Stream-a
 Flux.range(1, 5);                             // 1, 2, 3, 4, 5 (count, ne endIndex!)
 ```
 
-> ⚠️ `Flux.range(start, count)` — drugi parametar je **broj elemenata**,
+> ⚠️ `Flux.range(start, count)` - drugi parametar je **broj elemenata**,
 > ne krajnja vrednost. `Flux.range(1, 5)` daje `1..5`, ne `1..4`.
 
 ### 3.3. Iz lenjih izvora (`fromCallable`, `fromSupplier`, `defer`)
 
-Ovo je *važna grupa* — pokazuje kako Reactor gradi pojam **lenjosti**.
+Ovo je *važna grupa* - pokazuje kako Reactor gradi pojam **lenjosti**.
 
 ```java
 // Sinhroni posao se NE radi sad, nego u trenutku subscribe.
@@ -154,7 +154,7 @@ Mono<String> lenj = Mono.fromCallable(() -> {
 Mono<String> brzo = Mono.just(skupaOperacija());   // <- skupaOperacija() je VEC pozvana
 ```
 
-`defer` ide korak dalje — pravi *novi* Publisher na svakom novom subscribe-u:
+`defer` ide korak dalje - pravi *novi* Publisher na svakom novom subscribe-u:
 
 ```java
 Mono<Long> sad = Mono.fromSupplier(System::currentTimeMillis);
@@ -162,7 +162,7 @@ Mono<Long> sad = Mono.fromSupplier(System::currentTimeMillis);
 // just(System.currentTimeMillis()) bi se "smrznuo" na vremenu izgradnje pipeline-a
 // Mono.fromSupplier proveri vreme svaki put kad se subscribe-uje
 
-// defer obuhvata ceo "construct" — korisno kad sami pravimo Mono unutra:
+// defer obuhvata ceo "construct" - korisno kad sami pravimo Mono unutra:
 Mono<User> uvekSvez = Mono.defer(() -> userRepository.findById(id));
 //                          ^^^^^ pozove se na svaki subscribe
 ```
@@ -183,23 +183,23 @@ Mono<String> mono = Mono.fromFuture(future);
 ### 3.5. Vremenski izvori
 
 ```java
-// Beskonačan tok long-ova — 0, 1, 2, 3, ... svakih 100ms.
+// Beskonačan tok long-ova - 0, 1, 2, 3, ... svakih 100ms.
 Flux<Long> tikovi = Flux.interval(Duration.ofMillis(100));
 
 // Mono koji emituje samo jednu vrednost (0L) nakon datog vremena:
 Mono<Long> kasnije = Mono.delay(Duration.ofSeconds(1));
 ```
 
-> ⚠️ `interval` *podrazumevano radi na `Schedulers.parallel()`* — dakle,
+> ⚠️ `interval` *podrazumevano radi na `Schedulers.parallel()`* - dakle,
 > emituje na drugoj niti od main-a. Ako pokrenete demo i ne `block`-ujete
 > main, JVM se ugasi pre nego što se išta vidi. Detaljno o nitima u narednim nedeljama.
 
 ### 3.6. Programsko kreiranje (`generate`, `create`)
 
-Kada nijedan factory ne odgovara — pišemo *imperativni* generator. Postoje
+Kada nijedan factory ne odgovara - pišemo *imperativni* generator. Postoje
 dva ključna API-ja:
 
-#### `generate` — sinhroni, jedan element po pozivu
+#### `generate` - sinhroni, jedan element po pozivu
 
 ```java
 Flux<Integer> fibonacci = Flux.generate(
@@ -216,7 +216,7 @@ Pozovi `sink.next(...)` *tačno jednom* po pozivu lambde. `sink.complete()`
 ako tok treba da završi. Ovaj API je idealan kad imamo "stanje koje
 napreduje" (Fibonacci, brojač, čitanje iz fajla red po red, ...).
 
-#### `create` — asinhroni, više elemenata, idealan za "premoštavanje" callback API-ja
+#### `create` - asinhroni, više elemenata, idealan za "premoštavanje" callback API-ja
 
 ```java
 Flux<Event> dogadjaji = Flux.create(sink -> {
@@ -257,7 +257,7 @@ backpressure-a kod `create` kasnije.
 
 ## 4. Lifecycle, signali i `doOn*` hooks
 
-Setimo se od prosle nedelje — svaki Subscriber prolazi kroz tačno ovaj redosled:
+Setimo se od prosle nedelje - svaki Subscriber prolazi kroz tačno ovaj redosled:
 
 ```
 onSubscribe(Subscription)    ← uvek prvi
@@ -269,9 +269,9 @@ onComplete()  XOR  onError(Throwable)    ← terminalni
 
 Reactor nam daje **dva načina** da se "zakačimo" za te signale:
 
-1. **`subscribe(...)`** — terminalni, *aktivira* tok. Bez subscribe nema
+1. **`subscribe(...)`** - terminalni, *aktivira* tok. Bez subscribe nema
    ničega.
-2. **`doOn*` hooks** — međupozicije; ne aktiviraju tok, samo *posmatraju*
+2. **`doOn*` hooks** - međupozicije; ne aktiviraju tok, samo *posmatraju*
    signale dok prolaze.
 
 ### 4.1. `subscribe()` varijante
@@ -298,19 +298,19 @@ flux.subscribe(
     value -> System.out.println(value),                  // onNext
     err   -> System.err.println(err),                    // onError
     ()    -> System.out.println("gotovo"),               // onComplete
-    sub   -> sub.request(Long.MAX_VALUE));               // onSubscribe — kontrola backpressure-a
+    sub   -> sub.request(Long.MAX_VALUE));               // onSubscribe - kontrola backpressure-a
 ```
 
-Postoji i varijanta sa `Subscriber<T>` argumentom — tu prosleđujemo *ceo
+Postoji i varijanta sa `Subscriber<T>` argumentom - tu prosleđujemo *ceo
 custom subscriber* (kao u week 1 sa Flow API-jem). U praksi se retko
 piše ručno, jer hooks pokrivaju 95% slučajeva.
 
-> ⚠️ `subscribe()` vraća `Disposable` — preko koje možemo sa `.dispose()`
+> ⚠️ `subscribe()` vraća `Disposable` - preko koje možemo sa `.dispose()`
 > da otkažemo subscription. Korisno za long-running tokove.
 
 ### 4.2. `doOn*` hooks
 
-`doOn*` operatori su *čista observacija* — ne menjaju tok, samo izvrše
+`doOn*` operatori su *čista observacija* - ne menjaju tok, samo izvrše
 side-effect za određeni signal i puste signal dalje.
 
 | Hook | Kada se okida |
@@ -322,7 +322,7 @@ side-effect za određeni signal i puste signal dalje.
 | `doOnSuccess(Consumer<T>)` | (Mono) kad tok normalno završi |
 | `doOnError(Consumer<Throwable>)` | kad tok pukne |
 | `doOnTerminate(Runnable)` | onComplete *ili* onError (ne na cancel) |
-| `doFinally(Consumer<SignalType>)` | uvek — i na cancel |
+| `doFinally(Consumer<SignalType>)` | uvek - i na cancel |
 | `doOnCancel(Runnable)` | kad subscriber otkaže |
 
 ```java
@@ -351,10 +351,10 @@ Tipičan ispis:
 > `doOn*` hooks. **Nikad** u `map`. `map` mora biti čista funkcija; ako
 > dođe do `retry`, ceo `map` se ponovo izvršava i side-effect se *ponovi*.
 
-### 4.3. `log()` — najbolji prijatelj kad nešto ne radi
+### 4.3. `log()` - najbolji prijatelj kad nešto ne radi
 
 `log()` operator ispisuje *sve* signale dok prolaze, sa imenom kategorije
-i thread-om. Idealan za debug — ne moramo ručno da pišemo svaki `doOn*`.
+i thread-om. Idealan za debug - ne moramo ručno da pišemo svaki `doOn*`.
 
 ```java
 Flux.range(1, 3)
@@ -386,7 +386,7 @@ tokova je sporiji nego što treba.
 
 ---
 
-## 5. Osnovni operatori — preklapanje sa `Stream`-om
+## 5. Osnovni operatori - preklapanje sa `Stream`-om
 
 Većina operatora koje ste naučili u prvoj polovini semestra na `Stream<T>`
 **postoje** i na `Flux<T>` / `Mono<T>` sa *istim* značenjem.
@@ -410,20 +410,20 @@ Većina operatora koje ste naučili u prvoj polovini semestra na `Stream<T>`
 | `sort()` / `sort(Comparator)` | da | da | (potreban je terminalan tok!) |
 
 ```java
-// Stream — primer
+// Stream - primer
 List<String> rezultat = List.of("ana", "marko", "petar").stream()
     .filter(s -> s.length() > 3)
     .map(String::toUpperCase)
     .toList();   // [MARKO, PETAR]
 
-// Flux — IDENTIČAN pipeline, samo asinhron
+// Flux - IDENTIČAN pipeline, samo asinhron
 Mono<List<String>> rezultatM = Flux.just("ana", "marko", "petar")
     .filter(s -> s.length() > 3)
     .map(String::toUpperCase)
     .collectList();   // Mono<[MARKO, PETAR]>
 ```
 
-### 5.1. `reduce` vs. `scan` — mala ali važna razlika
+### 5.1. `reduce` vs. `scan` - mala ali važna razlika
 
 Ovo je sitnica koja postoji u Reactor-u, a u `Stream` API-ju ne. `reduce`
 emituje *jednu* vrednost na kraju; `scan` emituje *svaki međurezultat*.
@@ -440,7 +440,7 @@ Flux.range(1, 5)
 // 0, 1, 3, 6, 10, 15  (kumulativna suma na svakom koraku)
 ```
 
-`scan` je koristan za "running total"-e — npr. tekuća suma transakcija,
+`scan` je koristan za "running total"-e - npr. tekuća suma transakcija,
 tekući broj korisnika, tekući prosek.
 
 > **Demo:** [`OsnovniOperatori.java`](OsnovniOperatori.java)
@@ -449,7 +449,7 @@ tekući broj korisnika, tekući prosek.
 
 ## 6. Operatori kojih nema u `Stream`-u (vremenski, fallback)
 
-Stream API ne zna ništa o vremenu — sve se "desi sad". Reactor-u je
+Stream API ne zna ništa o vremenu - sve se "desi sad". Reactor-u je
 vreme prvoklasni pojam; tu su operatori koje na `Stream`-u jednostavno
 ne možemo imati.
 
@@ -466,7 +466,7 @@ Flux.just("kasno")
     .delaySubscription(Duration.ofSeconds(1))
     .subscribe(System.out::println);
 
-// Timeout — ako se ne emituje za dato vreme, padne sa TimeoutException
+// Timeout - ako se ne emituje za dato vreme, padne sa TimeoutException
 Mono.just("brzo")
     .delayElement(Duration.ofSeconds(2))
     .timeout(Duration.ofSeconds(1))
@@ -514,7 +514,7 @@ nadjiUKesu()
     .subscribe();
 ```
 
-### 6.3. Repeat — ponovi tok
+### 6.3. Repeat - ponovi tok
 
 ```java
 // Ponovi izvor 3 puta (ukupno 4 emisije: original + 3 ponavljanja)
@@ -524,18 +524,18 @@ Flux.just("ping")
 ```
 
 `repeat` se okida na **onComplete** signalu. Ako tok pukne, repeat
-ne radi — za to služi `retry` (week 5).
+ne radi - za to služi `retry` (week 5).
 
 ### 6.4. Kasnije
 
-`onErrorReturn`, `onErrorResume`, `retry`, `retryWhen` — sve je deo
+`onErrorReturn`, `onErrorResume`, `retry`, `retryWhen` - sve je deo
 *error handling*-a, koji ćemo gledati kasnije. Spomenute samo da znate da postoje.
 
 > **Demo:** [`VremenskiOperatori.java`](VremenskiOperatori.java)
 
 ---
 
-## 7. `block()` — kad i zašto u demo kodu
+## 7. `block()` - kad i zašto u demo kodu
 
 Ceo poenta reaktivnog modela je *neblokirajuće* izvršavanje. Pa zašto
 onda u našem demo kodu skoro stalno vidimo `.block()` ili `.blockLast()`
@@ -549,11 +549,11 @@ public static void main(String[] args) {
         .take(5)
         .subscribe(System.out::println);
     // main() ovde završi pre nego što se prvi tick desi.
-    // JVM gasi sve daemon niti — ništa se ne ispiše.
+    // JVM gasi sve daemon niti - ništa se ne ispiše.
 }
 ```
 
-`.subscribe()` je **non-blocking** — vraća se *odmah*, a tok teče u
+`.subscribe()` je **non-blocking** - vraća se *odmah*, a tok teče u
 pozadini na drugoj niti. Ako `main` ne čeka, JVM se ugasi.
 
 `block`/`blockLast`/`blockFirst` čekaju do završetka:
@@ -584,7 +584,7 @@ public static void main(String[] args) {
   je bolji izbor);
 - CLI alati gde je sinhrono čekanje *cilj*.
 
-### 7.3. Kad `block()` *nije* OK — "incident pricelist"
+### 7.3. Kad `block()` *nije* OK - "incident pricelist"
 
 > **Incident:** Production server u jednom Spring WebFlux projektu se
 > "zaledio" pod opterećenjem. Zatekli smo `.block()` u jednom servisnom
@@ -594,7 +594,7 @@ public static void main(String[] args) {
 > `subscribeOn` su tu da nikad ne moramo da blokiramo.
 
 **Pravilo:** `block` je dozvoljen *samo* na granici sa neredaktivnim
-svetom (main, test, CLI). Unutar reaktivnog pipeline-a — nikad.
+svetom (main, test, CLI). Unutar reaktivnog pipeline-a - nikad.
 
 > **Demo:** [`BlockingDemo.java`](BlockingDemo.java)
 
@@ -602,16 +602,16 @@ svetom (main, test, CLI). Unutar reaktivnog pipeline-a — nikad.
 
 ## 8. Šta dolazi sledeće nedelje
 
-Sad imamo izvore i osnovne operatore. Ono što sledeće nedelje radimo —
+Sad imamo izvore i osnovne operatore. Ono što sledeće nedelje radimo -
 **kombinovanje više tokova** i **asinhrona transformacija**:
 
 | Operator | Šta radi | Zašto je važan |
 |----------|----------|----------------|
 | `flatMap(T -> Mono/Flux)` | za svaki element pokreni novi async tok i *spoji* rezultate | osnova svake reaktivne kompozicije |
-| `concatMap(T -> Mono/Flux)` | kao `flatMap`, ali *garantuje redosled* — radi serijski | kad redosled važi (npr. transakcije) |
-| `switchMap(T -> Mono/Flux)` | "preklopi" na novi tok — otkaži stari kad stigne novi | za autocomplete, search-as-you-type |
+| `concatMap(T -> Mono/Flux)` | kao `flatMap`, ali *garantuje redosled* - radi serijski | kad redosled važi (npr. transakcije) |
+| `switchMap(T -> Mono/Flux)` | "preklopi" na novi tok - otkaži stari kad stigne novi | za autocomplete, search-as-you-type |
 | `merge(F1, F2, ...)` | spoji više Flux-eva u jedan, *paralelno* | event tokovi različitog porekla |
-| `concat(F1, F2, ...)` | spoji *redom* — F2 počinje tek kad F1 završi | kompozicija sa redosledom |
+| `concat(F1, F2, ...)` | spoji *redom* - F2 počinje tek kad F1 završi | kompozicija sa redosledom |
 | `zip(F1, F2, ...)` | spoji *po jedan* iz svakog izvora u tuple | čekaš na *sve* nezavisne pozive |
 | `combineLatest(...)` | uvek emituj sa najnovijim iz svakog izvora | UI state koji zavisi od više izvora |
 

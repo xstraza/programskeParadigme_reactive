@@ -8,19 +8,19 @@ import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 
 /**
- * Nedelja 3 — buffer, window, groupBy.
+ * Nedelja 3 - buffer, window, groupBy.
  *
  * Operatori koji NE menjaju vrednosti, ali menjaju STRUKTURU toka:
  * od toka pojedinacnih elemenata pravimo tok "paketa".
  *
- *   buffer       — sakuplja elemente u List i emituje listu po pravilu
+ *   buffer       - sakuplja elemente u List i emituje listu po pravilu
  *                  (broj elemenata, vreme, oba). Flux&lt;T&gt; → Flux&lt;List&lt;T&gt;&gt;.
  *
- *   window       — kao buffer, ali umesto liste emituje UNUTRASNJI Flux.
- *                  Flux&lt;T&gt; → Flux&lt;Flux&lt;T&gt;&gt;. Bogatija semantika — mozemo
+ *   window       - kao buffer, ali umesto liste emituje UNUTRASNJI Flux.
+ *                  Flux&lt;T&gt; → Flux&lt;Flux&lt;T&gt;&gt;. Bogatija semantika - mozemo
  *                  primeniti reaktivne operatore na svaki prozor.
  *
- *   groupBy      — particionise tok po kljucu. Flux&lt;T&gt; → Flux&lt;GroupedFlux&lt;K, T&gt;&gt;.
+ *   groupBy      - particionise tok po kljucu. Flux&lt;T&gt; → Flux&lt;GroupedFlux&lt;K, T&gt;&gt;.
  *                  Svaki GroupedFlux je nezavisni unutrasnji tok za jednu
  *                  vrednost kljuca.
  *
@@ -36,27 +36,27 @@ public class BufferWindowGroupByDemo {
     private static final DateTimeFormatter HHMMSS = DateTimeFormatter.ofPattern("HH:mm:ss.SSS");
 
     public static void main(String[] args) {
-        System.out.println("=== 1. buffer(N) — paketici fiksne velicine ===\n");
+        System.out.println("=== 1. buffer(N) - paketici fiksne velicine ===\n");
         bufferByCount();
 
-        System.out.println("\n=== 2. buffer(Duration) — paketici po vremenu ===\n");
+        System.out.println("\n=== 2. buffer(Duration) - paketici po vremenu ===\n");
         bufferByTime();
 
-        System.out.println("\n=== 3. buffer(N, Duration) — sta god prvo ===\n");
+        System.out.println("\n=== 3. buffer(N, Duration) - sta god prvo ===\n");
         bufferByCountOrTime();
 
-        System.out.println("\n=== 4. window(N) — kao buffer, ali tok od tokova ===\n");
+        System.out.println("\n=== 4. window(N) - kao buffer, ali tok od tokova ===\n");
         windowDemo();
 
-        System.out.println("\n=== 5. groupBy — particija po kljucu ===\n");
+        System.out.println("\n=== 5. groupBy - particija po kljucu ===\n");
         groupByDemo();
 
-        System.out.println("\n=== 6. groupBy + flatMap — paralelna obrada particija ===\n");
+        System.out.println("\n=== 6. groupBy + flatMap - paralelna obrada particija ===\n");
         groupByParallelDemo();
     }
 
     // -------------------------------------------------------------------
-    // buffer(N) — sakupi N elemenata, pa emituj listu. Kad se izvor zavrsi
+    // buffer(N) - sakupi N elemenata, pa emituj listu. Kad se izvor zavrsi
     // sa "nedovrsenim" paketom, emituje i njega (kraci od N).
     //
     // Primer: 7 elemenata, buffer(3) → [1,2,3], [4,5,6], [7].
@@ -69,7 +69,7 @@ public class BufferWindowGroupByDemo {
     }
 
     // -------------------------------------------------------------------
-    // buffer(Duration) — sve sto stigne u datom prozoru ide u jednu listu.
+    // buffer(Duration) - sve sto stigne u datom prozoru ide u jednu listu.
     //
     // Pogodno za agregaciju event tokova (npr. broj klikova po sekundi).
     // -------------------------------------------------------------------
@@ -82,11 +82,11 @@ public class BufferWindowGroupByDemo {
     }
 
     // -------------------------------------------------------------------
-    // buffer(N, Duration) — najfleksibilnije: emituj kad se popuni N
+    // buffer(N, Duration) - najfleksibilnije: emituj kad se popuni N
     // ILI kad istekne vreme, sta god prvo.
     //
     // Pravi backend pattern: "saljemo batch upis kad imamo 100 redova
-    // ili kad prodje 1s — koje god prvo stigne".
+    // ili kad prodje 1s - koje god prvo stigne".
     // -------------------------------------------------------------------
     static void bufferByCountOrTime() {
         Flux.interval(Duration.ofMillis(80))
@@ -97,11 +97,11 @@ public class BufferWindowGroupByDemo {
     }
 
     // -------------------------------------------------------------------
-    // window — kao buffer, ali umesto List dobijamo unutrasnji Flux.
+    // window - kao buffer, ali umesto List dobijamo unutrasnji Flux.
     // Mozemo na svaki prozor primeniti reaktivne operatore (count, sum,
     // distinct, ...) i tek onda spljostiti.
     //
-    // Ovde: prozor od 3, na svakom radimo count() — dobijamo sume po prozoru.
+    // Ovde: prozor od 3, na svakom radimo count() - dobijamo sume po prozoru.
     // -------------------------------------------------------------------
     static void windowDemo() {
         Flux.range(1, 10)
@@ -119,14 +119,14 @@ public class BufferWindowGroupByDemo {
     }
 
     // -------------------------------------------------------------------
-    // groupBy — particionise tok po kljucu. Vraca Flux&lt;GroupedFlux&lt;K, T&gt;&gt;.
+    // groupBy - particionise tok po kljucu. Vraca Flux&lt;GroupedFlux&lt;K, T&gt;&gt;.
     //
     // GroupedFlux je obican Flux koji nosi svoj kljuc (group.key()).
     // Pravi se NOVI unutrasnji tok za svaki put kad se pojavi nov kljuc.
     //
     // PAZNJA: groupBy se MORA konzumirati (svaki grupni tok mora imati
     // subscriber-a), inace ce backpressure zaglaviti pipeline. Najlakse
-    // — odmah flatMap-uj svaku grupu.
+    // - odmah flatMap-uj svaku grupu.
     // -------------------------------------------------------------------
     static void groupByDemo() {
         Flux.just("Ana", "Aleksandar", "Marko", "Milan", "Petar", "Pavle", "Ana")
@@ -138,7 +138,7 @@ public class BufferWindowGroupByDemo {
     }
 
     // -------------------------------------------------------------------
-    // Pravi primer — particije se obradjuju PARALELNO.
+    // Pravi primer - particije se obradjuju PARALELNO.
     //
     // Ulaz: par-id + payload. Hocemo da svaki id obradimo nezavisno
     // (jer su id-jevi nezavisni), ali da unutar jednog id-a redosled

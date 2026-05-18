@@ -6,7 +6,7 @@ import java.util.concurrent.SubmissionPublisher;
 import java.util.concurrent.TimeUnit;
 
 /**
- * Nedelja 1 — Java Flow API u praksi
+ * Nedelja 1 - Java Flow API u praksi
  *
  * U prethodnom primeru smo ručno implementirali Publisher i Subscription.
  * Java standardna biblioteka već ima gotovog Publisher-a:
@@ -14,13 +14,13 @@ import java.util.concurrent.TimeUnit;
  *
  * Ovo je MOST između Stream API-ja (sinhrono) i pravih reaktivnih
  * biblioteka (Reactor, RxJava). Sam Flow API NEMA operatore (map,
- * filter, ...) — zato u nedelji 2 prelazimo na Project Reactor.
+ * filter, ...) - zato u nedelji 2 prelazimo na Project Reactor.
  *
  * Demonstrira:
  *  - SubmissionPublisher kao gotov Publisher
  *  - Flow.Subscriber implementacija
  *  - Async dispatch (SubmissionPublisher koristi ForkJoinPool po default-u)
- *  - try-with-resources — close() šalje onComplete
+ *  - try-with-resources - close() šalje onComplete
  */
 public class JavaFlowApiDemo {
 
@@ -33,8 +33,8 @@ public class JavaFlowApiDemo {
     }
 
     // -----------------------------------------------------------------------
-    // Osnovni demo — jedan Publisher, jedan Subscriber.
-    // SubmissionPublisher dispatcuje na ForkJoinPool — zato se
+    // Osnovni demo - jedan Publisher, jedan Subscriber.
+    // SubmissionPublisher dispatcuje na ForkJoinPool - zato se
     // ime niti razlikuje od main niti.
     // -----------------------------------------------------------------------
     static void submissionPublisherDemo() throws InterruptedException {
@@ -45,7 +45,7 @@ public class JavaFlowApiDemo {
             List.of("Beograd", "Niš", "Novi Sad", "Kragujevac")
                     .forEach(publisher::submit);
 
-            // Sačekaj malo — submit je asinhron, ne želimo da main istekne pre dispatch-a.
+            // Sačekaj malo - submit je asinhron, ne želimo da main istekne pre dispatch-a.
             // U realnom sistemu se ne čeka ovako; ovo je samo zato što je demo.
             Thread.sleep(300);
         }
@@ -54,8 +54,8 @@ public class JavaFlowApiDemo {
     }
 
     // -----------------------------------------------------------------------
-    // Više Subscriber-a — svaki dobija KOPIJU svake emisije.
-    // Ovo je tzv. "hot" multicast — emitovani element ide svima koji su
+    // Više Subscriber-a - svaki dobija KOPIJU svake emisije.
+    // Ovo je tzv. "hot" multicast - emitovani element ide svima koji su
     // u tom trenutku pretplaćeni. (Detaljnije o hot/cold u nedelji 7.)
     // -----------------------------------------------------------------------
     static void multiSubscriberDemo() throws InterruptedException {
@@ -68,7 +68,7 @@ public class JavaFlowApiDemo {
             }
 
             // Daj malo vremena async dispatcher-u
-            publisher.consume(_ -> { /* ignored — već imamo subscriber */ })
+            publisher.consume(_ -> { /* ignored - već imamo subscriber */ })
                     .get(1, TimeUnit.SECONDS);
         } catch (Exception e) {
             // demo ignoriše
@@ -78,7 +78,7 @@ public class JavaFlowApiDemo {
 
     // -----------------------------------------------------------------------
     // Jednostavan Subscriber koji štampa sve signale i traži po 1 element.
-    // Tražimo Long.MAX_VALUE — nema backpressure-a — što je OK za demo,
+    // Tražimo Long.MAX_VALUE - nema backpressure-a - što je OK za demo,
     // ali nije pristup za production.
     // -----------------------------------------------------------------------
     static class PrintingSubscriber implements Flow.Subscriber<Object> {

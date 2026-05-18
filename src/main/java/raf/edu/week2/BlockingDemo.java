@@ -8,49 +8,49 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * Nedelja 2 — block(), blockFirst(), blockLast(), blockOptional().
+ * Nedelja 2 - block(), blockFirst(), blockLast(), blockOptional().
  *
  * Ceo poenta reaktivnog modela je NEBLOKIRAJUĆE izvršavanje.
  * Pa zašto onda u demo kodu skoro stalno vidimo .block() na kraju?
  *
  * Odgovor: zato što `main` nije reaktivni kontekst. subscribe() je
- * non-blocking — vraća se ODMAH, a tok teče u pozadini. Ako main
+ * non-blocking - vraća se ODMAH, a tok teče u pozadini. Ako main
  * ne čeka, JVM se ugasi.
  *
  * Ovaj demo pokazuje:
  *   1. Šta se desi BEZ block-a (pokaze zašto demo treba block).
- *   2. block() na Mono-u — vraća T (ili null).
- *   3. blockOptional() — sigurnija verzija, vraća Optional<T>.
- *   4. blockFirst / blockLast — Flux varijante.
- *   5. block(Duration) — sa timeout-om.
- *   6. NEGATIVAN PRIMER — block u operatoru. NIKAD!
+ *   2. block() na Mono-u - vraća T (ili null).
+ *   3. blockOptional() - sigurnija verzija, vraća Optional<T>.
+ *   4. blockFirst / blockLast - Flux varijante.
+ *   5. block(Duration) - sa timeout-om.
+ *   6. NEGATIVAN PRIMER - block u operatoru. NIKAD!
  */
 public class BlockingDemo {
 
     public static void main(String[] args) throws InterruptedException {
-        System.out.println("=== 1. Bez block — JVM se gasi pre kraja toka ===\n");
+        System.out.println("=== 1. Bez block - JVM se gasi pre kraja toka ===\n");
         bezBlock();
 
-        System.out.println("\n=== 2. Mono.block() — vrati T ===\n");
+        System.out.println("\n=== 2. Mono.block() - vrati T ===\n");
         monoBlock();
 
-        System.out.println("\n=== 3. Mono.blockOptional() — sigurnija varijanta ===\n");
+        System.out.println("\n=== 3. Mono.blockOptional() - sigurnija varijanta ===\n");
         monoBlockOptional();
 
         System.out.println("\n=== 4. Flux.blockFirst() / blockLast() ===\n");
         fluxBlock();
 
-        System.out.println("\n=== 5. block(Duration) — sa timeout-om ===\n");
+        System.out.println("\n=== 5. block(Duration) - sa timeout-om ===\n");
         blockSaTimeoutom();
 
-        System.out.println("\n=== 6. KAD NE BLOKIRATI — block u operatoru ===\n");
+        System.out.println("\n=== 6. KAD NE BLOKIRATI - block u operatoru ===\n");
         kadNeBlokirati();
     }
 
     // -------------------------------------------------------------------
     // Bez block, async tok ne stigne pre nego što main završi.
     // (Ovo demonstriramo sa kratkim sleep-om da bismo videli da je
-    //  tok bar POČEO — bez sleep-a JVM bi se ugasio pre subscribe-a.)
+    //  tok bar POČEO - bez sleep-a JVM bi se ugasio pre subscribe-a.)
     // -------------------------------------------------------------------
     static void bezBlock() throws InterruptedException {
         Flux.interval(Duration.ofMillis(50))
@@ -64,7 +64,7 @@ public class BlockingDemo {
     }
 
     // -------------------------------------------------------------------
-    // Mono.block() — sinhroni "izvuci vrednost". Vrati T, ili null ako
+    // Mono.block() - sinhroni "izvuci vrednost". Vrati T, ili null ako
     // je tok bio prazan, ili throw RuntimeException ako je tok pukao.
     // -------------------------------------------------------------------
     static void monoBlock() {
@@ -74,13 +74,13 @@ public class BlockingDemo {
 
         System.out.println("  [block]      " + v);
 
-        // Mono.empty().block() — vraća null
+        // Mono.empty().block() - vraća null
         String prazan = Mono.<String>empty().block();
         System.out.println("  [block null] " + prazan);
     }
 
     // -------------------------------------------------------------------
-    // blockOptional — bezbedno za prazan tok, vraća Optional<T>.
+    // blockOptional - bezbedno za prazan tok, vraća Optional<T>.
     // -------------------------------------------------------------------
     static void monoBlockOptional() {
         Optional<String> ima = Mono.just("ima").blockOptional();
@@ -92,8 +92,8 @@ public class BlockingDemo {
 
     // -------------------------------------------------------------------
     // Flux ima dve varijante:
-    //   - blockFirst — uzmi prvi pa otkaži ostatak
-    //   - blockLast  — čekaj do kraja, vrati poslednji
+    //   - blockFirst - uzmi prvi pa otkaži ostatak
+    //   - blockLast  - čekaj do kraja, vrati poslednji
     // -------------------------------------------------------------------
     static void fluxBlock() {
         Integer prvi = Flux.range(1, 5)
@@ -114,7 +114,7 @@ public class BlockingDemo {
     }
 
     // -------------------------------------------------------------------
-    // block(Duration) — defanzivnost. Ako se tok ne završi za dato
+    // block(Duration) - defanzivnost. Ako se tok ne završi za dato
     // vreme, baca IllegalStateException.
     // -------------------------------------------------------------------
     static void blockSaTimeoutom() {
@@ -124,7 +124,7 @@ public class BlockingDemo {
                     .block(Duration.ofMillis(200));   // tok traje 2s, mi čekamo 200ms
         } catch (IllegalStateException e) {
             System.out.println("  [block(200ms)] bacio: " + e.getClass().getSimpleName()
-                    + " — " + e.getMessage());
+                    + " - " + e.getMessage());
         }
     }
 
@@ -140,7 +140,7 @@ public class BlockingDemo {
         System.out.println("""
                   PRAVILO: NIKAD .block() unutar operatora.
 
-                  // ANTI-PATTERN — NE radi ovako:
+                  // ANTI-PATTERN - NE radi ovako:
                   flux.map(id -> Mono.just(fetchUser(id)).block());
                   //                                      ^^^^^^^
                   // Reactor će u nekim slučajevima baciti exception;

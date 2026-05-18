@@ -9,7 +9,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.List;
 
 /**
- * Nedelja 2 — rešenja zadataka iz {@link PracticeTasksForStudents}.
+ * Nedelja 2 - rešenja zadataka iz {@link PracticeTasksForStudents}.
  *
  * Svako rešenje je u zasebnoj statičkoj metodi i može se pokrenuti
  * pojedinačno.
@@ -38,7 +38,7 @@ public class PracticeTasksSolutions {
     }
 
     // -------------------------------------------------------------------
-    // Zadatak 1 — Title Case + filter na 4+ karaktera.
+    // Zadatak 1 - Title Case + filter na 4+ karaktera.
     //
     // Tehnike: fromIterable, map (sa pomocnom funkcijom), filter, subscribe.
     // -------------------------------------------------------------------
@@ -55,7 +55,7 @@ public class PracticeTasksSolutions {
     }
 
     // -------------------------------------------------------------------
-    // Zadatak 2 — suma kvadrata neparnih iz 1..20.
+    // Zadatak 2 - suma kvadrata neparnih iz 1..20.
     //
     // Tehnike: range, filter, map, reduce, subscribe.
     // -------------------------------------------------------------------
@@ -68,7 +68,7 @@ public class PracticeTasksSolutions {
     }
 
     // -------------------------------------------------------------------
-    // Zadatak 3 — eager just vs lazy fromCallable.
+    // Zadatak 3 - eager just vs lazy fromCallable.
     //
     // just  : vrednost se izračuna PRI kreiranju Mono-a; sva 3 ista.
     // fromCallable : izračun na svaki subscribe; 3 različita vremena.
@@ -91,7 +91,7 @@ public class PracticeTasksSolutions {
     }
 
     // -------------------------------------------------------------------
-    // Zadatak 4 — vremenski razvučen tok.
+    // Zadatak 4 - vremenski razvučen tok.
     //
     // Tehnike: range, delayElements, doOnNext sa logom, blockLast.
     //
@@ -110,7 +110,7 @@ public class PracticeTasksSolutions {
     }
 
     // -------------------------------------------------------------------
-    // Zadatak 5 — svi doOn* hooks redom.
+    // Zadatak 5 - svi doOn* hooks redom.
     //
     // Redosled koji vidimo:
     //   subscribe -> request -> next(a) -> next(b) -> next(c)
@@ -127,11 +127,11 @@ public class PracticeTasksSolutions {
     }
 
     // -------------------------------------------------------------------
-    // Zadatak 6 — error tok, defaultIfEmpty vs onErrorReturn.
+    // Zadatak 6 - error tok, defaultIfEmpty vs onErrorReturn.
     //
     // POENTA: defaultIfEmpty se okida SAMO na onComplete bez emisije.
     // Na error tok ostaje "pukao". Za fallback na error koristi se
-    // onErrorReturn (ili onErrorResume — week 5).
+    // onErrorReturn (ili onErrorResume - week 5).
     // -------------------------------------------------------------------
     static void zadatak6() {
         // (a)+(b) error + log
@@ -154,8 +154,8 @@ public class PracticeTasksSolutions {
             System.out.println("  block bacio: " + e.getMessage());
         }
 
-        // (d) onErrorReturn — to JE fallback za error.
-        System.out.println("\n(d) onErrorReturn — sad smo zaštićeni:");
+        // (d) onErrorReturn - to JE fallback za error.
+        System.out.println("\n(d) onErrorReturn - sad smo zaštićeni:");
         String v = Mono.<String>error(new RuntimeException("oops"))
                 .onErrorReturn("fallback")
                 .block();
@@ -163,7 +163,7 @@ public class PracticeTasksSolutions {
     }
 
     // -------------------------------------------------------------------
-    // Zadatak 7 — fallback chain (kes -> baza -> API).
+    // Zadatak 7 - fallback chain (kes -> baza -> API).
     //
     // Tehnike: Mono.empty / Mono.fromCallable, switchIfEmpty, doOnNext.
     // -------------------------------------------------------------------
@@ -193,7 +193,7 @@ public class PracticeTasksSolutions {
     }
 
     // -------------------------------------------------------------------
-    // Zadatak 8 — Fibonacci do 100, pomoću Flux.generate.
+    // Zadatak 8 - Fibonacci do 100, pomoću Flux.generate.
     //
     // Tehnike: generate sa stanjem (par [a, b]), sink.next, sink.complete.
     // -------------------------------------------------------------------
@@ -214,7 +214,7 @@ public class PracticeTasksSolutions {
     }
 
     // -------------------------------------------------------------------
-    // Mali helper za zadatak 3 — sleep bez interrupted exception buke.
+    // Mali helper za zadatak 3 - sleep bez interrupted exception buke.
     // -------------------------------------------------------------------
     static void spavaj(long ms) {
         try { Thread.sleep(ms); } catch (InterruptedException ignored) {}

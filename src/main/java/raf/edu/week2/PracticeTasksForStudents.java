@@ -1,11 +1,11 @@
 package raf.edu.week2;
 
 /**
- * Nedelja 2 — zadaci za samostalnu vežbu.
+ * Nedelja 2 - zadaci za samostalnu vežbu.
  *
  * Svaki zadatak ima:
  *   - kratak opis (šta treba)
- *   - "očekivani izlaz" — približno kako bi trebalo da izgleda ispis
+ *   - "očekivani izlaz" - približno kako bi trebalo da izgleda ispis
  *   - prazno mesto za rešenje (TODO)
  *
  * Rešenja su u {@link PracticeTasksSolutions}.
@@ -29,7 +29,7 @@ public class PracticeTasksForStudents {
     }
 
     // ===================================================================
-    // Zadatak 1 — Flux iz liste imena
+    // Zadatak 1 - Flux iz liste imena
     //
     // Napravi Flux od liste imena ["Ana", "marko", "PETAR", "Jovana"].
     // Pretvori sva imena u "Title Case" (prvi karakter veliko, ostalo
@@ -45,7 +45,7 @@ public class PracticeTasksForStudents {
     }
 
     // ===================================================================
-    // Zadatak 2 — kvadrati neparnih brojeva
+    // Zadatak 2 - kvadrati neparnih brojeva
     //
     // Iz Flux.range(1, 20):
     //   - filtriraj samo neparne
@@ -61,7 +61,7 @@ public class PracticeTasksForStudents {
     }
 
     // ===================================================================
-    // Zadatak 3 — fromCallable vs just
+    // Zadatak 3 - fromCallable vs just
     //
     // Pravilo iz README-a: just se izvršava ODMAH; fromCallable na
     // svaki subscribe.
@@ -81,7 +81,7 @@ public class PracticeTasksForStudents {
     }
 
     // ===================================================================
-    // Zadatak 4 — vremenski razvučen tok sa logom
+    // Zadatak 4 - vremenski razvučen tok sa logom
     //
     // Napravi Flux.range(1, 5), dodaj delayElements(300ms), i loguj
     // svaki element u formatu:
@@ -96,7 +96,7 @@ public class PracticeTasksForStudents {
     }
 
     // ===================================================================
-    // Zadatak 5 — svi doOn* hooks
+    // Zadatak 5 - svi doOn* hooks
     //
     // Napravi Flux.just("a", "b", "c") i okači REDOM:
     //   doOnSubscribe, doOnRequest, doOnNext, doOnComplete,
@@ -112,11 +112,11 @@ public class PracticeTasksForStudents {
     }
 
     // ===================================================================
-    // Zadatak 6 — error tok sa log() i fallback-om
+    // Zadatak 6 - error tok sa log() i fallback-om
     //
     // (a) Napravi Mono.error(new RuntimeException("oops")).
     // (b) Dodaj log() operator.
-    // (c) Dodaj defaultIfEmpty("default") — pitanje: da li se okida na error?
+    // (c) Dodaj defaultIfEmpty("default") - pitanje: da li se okida na error?
     // (d) Probaj umesto toga onErrorReturn("fallback") (videti Reactor docs).
     //
     // Cilj zadatka je da vidiš RAZLIKU između "prazan tok" (defaultIfEmpty)
@@ -127,9 +127,9 @@ public class PracticeTasksForStudents {
     }
 
     // ===================================================================
-    // Zadatak 7 — fallback chain sa switchIfEmpty
+    // Zadatak 7 - fallback chain sa switchIfEmpty
     //
-    // Simuliraj 3 izvora podataka (kes, baza, API) — svaki je metoda
+    // Simuliraj 3 izvora podataka (kes, baza, API) - svaki je metoda
     // koja vraća Mono<String>. Prva dva neka budu Mono.empty(), treći
     // neka vrati realno ime.
     //
@@ -143,7 +143,7 @@ public class PracticeTasksForStudents {
     }
 
     // ===================================================================
-    // Zadatak 8 — generate, sa stanjem (Fibonacci do 100)
+    // Zadatak 8 - generate, sa stanjem (Fibonacci do 100)
     //
     // Koristeći Flux.generate, napravi tok Fibonacci brojeva
     // (1, 1, 2, 3, 5, 8, 13, 21, ...). Završi tok kada element pređe

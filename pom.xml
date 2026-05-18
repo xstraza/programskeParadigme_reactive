@@ -31,7 +31,7 @@
     </dependencyManagement>
 
     <dependencies>
-        <!-- Project Reactor — jezgro reaktivnog stacka (Mono, Flux, Schedulers) -->
+        <!-- Project Reactor - jezgro reaktivnog stacka (Mono, Flux, Schedulers) -->
         <dependency>
             <groupId>io.projectreactor</groupId>
             <artifactId>reactor-core</artifactId>
@@ -43,14 +43,14 @@
             <artifactId>reactor-test</artifactId>
         </dependency>
 
-        <!-- Reactor Netty — WebClient i HTTP demo (week 6) -->
+        <!-- Reactor Netty - WebClient i HTTP demo (week 6) -->
         <dependency>
             <groupId>io.projectreactor.netty</groupId>
             <artifactId>reactor-netty-http</artifactId>
             <version>${reactor.netty.version}</version>
         </dependency>
 
-        <!-- SLF4J + simple logger — vidljivo logovanje schedulera u konzoli -->
+        <!-- SLF4J + simple logger - vidljivo logovanje schedulera u konzoli -->
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-api</artifactId>

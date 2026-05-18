@@ -1,4 +1,4 @@
-# Paradigme Programiranja — Nedelja 3
+# Paradigme Programiranja - Nedelja 3
 ## Transformacije i kombinacije tokova
 
 > Kompozicija reaktivnih tokova: kako više nezavisnih `Mono` / `Flux`
@@ -11,11 +11,11 @@
 1. [Uvod](#1-uvod)
 2. [`flatMap`, `concatMap`, `flatMapSequential`](#2-flatmap-concatmap-flatmapsequential)
 3. [Šira porodica: `flatMapMany`, `flatMapIterable`, `expand`](#3-šira-porodica-flatmapmany-flatmapiterable-expand)
-4. [`switchMap` — autocomplete pattern](#4-switchmap--autocomplete-pattern)
+4. [`switchMap` - autocomplete pattern](#4-switchmap--autocomplete-pattern)
 5. [`merge`, `concat`, `mergeSequential`](#5-merge-concat-mergesequential)
 6. [`zip`, `combineLatest`, `withLatestFrom`, `Mono.when`, `firstWithValue`](#6-zip-combinelatest-withlatestfrom-monowhen-firstwithvalue)
 7. [`buffer`, `window`, `groupBy`](#7-buffer-window-groupby)
-8. [Brza referenca — koji operator kada](#8-brza-referenca--koji-operator-kada)
+8. [Brza referenca - koji operator kada](#8-brza-referenca--koji-operator-kada)
 9. [Šta dolazi sledeće nedelje](#9-šta-dolazi-sledeće-nedelje)
 10. [Primeri koda i vežbe](#10-primeri-koda-i-vežbe)
 
@@ -24,7 +24,7 @@
 ## 1. Uvod
 
 Prošle nedelje smo obradili **osnovne operatore** (`map`, `filter`,
-`reduce`, ...) — sve operatore koji rade nad **jednim** tokom i ne
+`reduce`, ...) - sve operatore koji rade nad **jednim** tokom i ne
 diraju vreme.
 
 Sad ulazimo u operatore koji su **suština reaktivnog programiranja** i
@@ -36,7 +36,7 @@ Sad ulazimo u operatore koji su **suština reaktivnog programiranja** i
   `groupBy`).
 
 Razlog što ovog nema u Stream-u je jednostavan: `Stream` ne zna za
-vreme, pa "spoji dva toka po jedan element kako stignu" nema smisla —
+vreme, pa "spoji dva toka po jedan element kako stignu" nema smisla -
 sve se "već desilo". U reaktivnom svetu, **kada** element stigne je
 prvoklasna informacija.
 
@@ -45,18 +45,18 @@ prvoklasna informacija.
 > **vremensku** dimenziju, i može da bude **paralelan**.
 
 ```java
-// FP (week 1 prvog semestra) — flatMap nad listom
+// FP (week 1 prvog semestra) - flatMap nad listom
 List<Integer> rez = List.of(1, 2, 3).stream()
     .flatMap(n -> Stream.of(n, n * 10))
     .toList();   // [1, 10, 2, 20, 3, 30]
 
-// Reactor (week 3) — flatMap nad reaktivnim tokom, sa ASYNC unutrašnjim tokom
+// Reactor (week 3) - flatMap nad reaktivnim tokom, sa ASYNC unutrašnjim tokom
 Flux.just(1, 2, 3)
     .flatMap(n -> Mono.fromCallable(() -> "User#" + n).delayElement(Duration.ofMillis(100)))
     .subscribe(System.out::println);
 ```
 
-Isti operator, ista ideja — samo što unutar `flatMap`-a sada može da
+Isti operator, ista ideja - samo što unutar `flatMap`-a sada može da
 bude **mrežni poziv, baza, fajl, ili drugi reaktivni izvor**.
 
 ---
@@ -88,22 +88,22 @@ flatMapSequential: [1a, 1b, 2a, 2b, 3a, 3b]   ← redosled isti, ali sve teklo p
 
 ### Kada šta
 
-- **`flatMap`** — kada želiš maksimalan paralelizam i ne mariš za
+- **`flatMap`** - kada želiš maksimalan paralelizam i ne mariš za
   redosled. Primer: za listu user-id-jeva, povuci profil iz REST API-ja
   za svakog. Redosled rezultata nije važan jer ćeš ih svakako mapirati
   u `Map<id, User>` ili ih ispisati.
 
-- **`concatMap`** — kada redosled rezultata MORA da prati redosled ulaza
+- **`concatMap`** - kada redosled rezultata MORA da prati redosled ulaza
   i kada **side efekti** unutrašnjeg toka (npr. upis u bazu) ne smeju
   da se preklapaju. Primer: stream domena događaja iz event-sourcing
-  sistema — sledeći događaj ne sme da krene dok prethodni ne završi.
+  sistema - sledeći događaj ne sme da krene dok prethodni ne završi.
 
-- **`flatMapSequential`** — najređi, ali važan: kada želiš paralelizam
+- **`flatMapSequential`** - najređi, ali važan: kada želiš paralelizam
   zbog brzine, ali ti je redosled prikaza bitan. Primer: prikaz lista
-  rezultata gde svaki red zahteva async obogaćivanje — neka teku
+  rezultata gde svaki red zahteva async obogaćivanje - neka teku
   paralelno, ali prikaži ih u redu.
 
-### `flatMap` + `Mono` — najčešći pattern
+### `flatMap` + `Mono` - najčešći pattern
 
 `flatMap` na `Mono` (ili `Flux`) sa funkcijom koja vraća `Mono`:
 
@@ -114,7 +114,7 @@ Flux.just(1, 2, 3)
     .subscribe(System.out::println);
 ```
 
-Bez `flatMap`-a, sa `map`-om, dobili bi `Flux<Mono<User>>` — tok
+Bez `flatMap`-a, sa `map`-om, dobili bi `Flux<Mono<User>>` - tok
 **obećanja**, ne korisnika. `flatMap` "spljošti" jedan nivo.
 
 > **Demo:** [`FlatMapVariants.java`](FlatMapVariants.java)
@@ -125,9 +125,9 @@ Bez `flatMap`-a, sa `map`-om, dobili bi `Flux<Mono<User>>` — tok
 
 Tri "rođaka" `flatMap`-a koji popunjavaju česte rupe u praksi.
 
-### `flatMapMany` — `Mono<T>` → `Flux<R>`
+### `flatMapMany` - `Mono<T>` → `Flux<R>`
 
-"Jedan poziv vrati listu — hoću svaki red kao zaseban element."
+"Jedan poziv vrati listu - hoću svaki red kao zaseban element."
 
 ```java
 Mono<HttpResponse> response = httpKlijent.get("/users");
@@ -135,14 +135,14 @@ Mono<HttpResponse> response = httpKlijent.get("/users");
 Flux<User> korisnici = response.flatMapMany(r -> Flux.fromIterable(r.items()));
 ```
 
-Bez `flatMapMany`-ja morali bismo `.flatMap(r -> Flux.fromIterable(...))` —
+Bez `flatMapMany`-ja morali bismo `.flatMap(r -> Flux.fromIterable(...))` -
 ali tip izlaza bi bio i dalje `Mono<Flux<...>>`. `flatMapMany` direktno
 "prebacuje" iz Mono u Flux svet.
 
-### `flatMapIterable` — `Flux<T>` sa `T = Iterable<R>` → `Flux<R>`
+### `flatMapIterable` - `Flux<T>` sa `T = Iterable<R>` → `Flux<R>`
 
 Brži i čitljiviji nego `flatMap(x -> Flux.fromIterable(x))`. Sinhron,
-bez spinanja unutrašnjeg `Publisher`-a — tako da je idealan za
+bez spinanja unutrašnjeg `Publisher`-a - tako da je idealan za
 "ravno prelivanje" stranica/listi.
 
 ```java
@@ -151,7 +151,7 @@ Flux<List<Item>> stranice = api.fetchStranice();
 Flux<Item> sviItemi = stranice.flatMapIterable(s -> s);
 ```
 
-### `expand` — rekurzivno proširivanje
+### `expand` - rekurzivno proširivanje
 
 Za svaki emitovani element pokrene **novi `Publisher`**, a njegove
 rezultate **ponovo razgranja**. Staje kad expander vrati prazan tok.
@@ -178,7 +178,7 @@ Flux.just(koren)
     .expand(cvor -> Flux.fromIterable(cvor.deca()));
 ```
 
-Idiom za rekurzivnu strukturu — kategorije sa pod-kategorijama, file
+Idiom za rekurzivnu strukturu - kategorije sa pod-kategorijama, file
 system, DOM stablo.
 
 > ⚠️ `expandDeep` postoji kao DFS varijanta (depth-first); `expand` je
@@ -188,7 +188,7 @@ system, DOM stablo.
 
 ---
 
-## 4. `switchMap` — autocomplete pattern
+## 4. `switchMap` - autocomplete pattern
 
 `switchMap` je rođak `flatMap`-a sa jednom ključnom razlikom:
 
@@ -209,7 +209,7 @@ switchMap:  (rezA i rezB otkazani)  ↓
 
 Korisnik kuca u search box: `"B"`, `"Be"`, `"Beo"`, `"Beog"`. Svaki
 karakter okine HTTP poziv ka backend-u za sugestije. Pre nego što
-prvi poziv stigne, korisnik je kucnuo još tri slova — stari rezultati
+prvi poziv stigne, korisnik je kucnuo još tri slova - stari rezultati
 su **irelevantni**. `switchMap` otkazuje sve osim poslednjeg.
 
 ```java
@@ -219,9 +219,9 @@ kucanjeFlux
 ```
 
 `doOnCancel` na unutrašnjem tok-u nam pokazuje kada se prethodni zaista
-otkazuje — vrlo poučno za debug.
+otkazuje - vrlo poučno za debug.
 
-### Drugi tipičan slučaj — UI selekcija
+### Drugi tipičan slučaj - UI selekcija
 
 Korisnik klikne user-a A → fetchamo profil A. Klikne user-a B → fetch
 A je otkazan, pokrenut fetch B. Bez `switchMap`-a, ako su pozivi
@@ -277,7 +277,7 @@ Flux.merge(a, b, c)   ≡   Flux.just(a, b, c).flatMap(x -> x)
 
 ### `mergeWith` / `concatWith` / `startWith`
 
-Instance verzije — čitljivije kad ima glavni tok i jedan dodatak:
+Instance verzije - čitljivije kad ima glavni tok i jedan dodatak:
 
 ```java
 osnova.mergeWith(dodatak)
@@ -288,7 +288,7 @@ osnova.concatWithValues("done")    // ubaci na kraj
 
 ### Pažnja: greška prekida lanac
 
-`concat` na prvi `onError` prekida ostatak — ostali `Flux`-evi se
+`concat` na prvi `onError` prekida ostatak - ostali `Flux`-evi se
 nikada ne pretplate. Za "ne odustaji na prvu grešku", postoji
 `Flux.concatDelayError` / `mergeDelayError`. Detalji o error handling-u u narednim nedeljama.
 
@@ -301,10 +301,10 @@ nikada ne pretplate. Za "ne odustaji na prvu grešku", postoji
 Spajanje **vrednosti** iz više tokova u jedan rezultat (tuple ili
 korisnička funkcija).
 
-### `zip` — "Promise.all"
+### `zip` - "Promise.all"
 
 Čeka po **jedan** element iz **svakog** izvora, pravi tuple, emituje.
-Brzi izvor čeka spori. Kad neki izvor završi — `zip` završi.
+Brzi izvor čeka spori. Kad neki izvor završi - `zip` završi.
 
 ```java
 Mono<String> profile = userService.profile();
@@ -318,7 +318,7 @@ Mono.zip(profile, posts, friends)
 
 Sva tri poziva idu paralelno, ukupno vreme je `max` (ne `sum`).
 
-### `combineLatest` — UI state
+### `combineLatest` - UI state
 
 Emituje **na svaku promenu BILO KOG izvora**, koristeći **najnovije
 poznate** vrednosti svih ostalih. Počinje tek kad svaki izvor jednom
@@ -331,11 +331,11 @@ Flux.combineLatest(tekstInput, filterChip, sortDugme,
     .subscribe(ui::prikazi);
 ```
 
-Sve tri komponente UI-ja se posmatraju — kad korisnik kucne, kad
+Sve tri komponente UI-ja se posmatraju - kad korisnik kucne, kad
 klikne na filter, kad promeni sort, **prebroji najnovije** sve i
 osveži rezultat.
 
-### `withLatestFrom` — događaj + state
+### `withLatestFrom` - događaj + state
 
 `combineLatest`-ova "asimetrična" verzija: emituje **samo** na promenu
 glavnog toka; drugi tok je samo "state koji leti pored".
@@ -347,13 +347,13 @@ klikoviNaSubmit
     .subscribe();
 ```
 
-Kad korisnik klikne Submit — uzmi trenutnu vrednost forme i pošalji.
+Kad korisnik klikne Submit - uzmi trenutnu vrednost forme i pošalji.
 Bez `withLatestFrom`-a, morali bismo ručno da držimo poslednju
 vrednost forme.
 
-### `Mono.when` — "sačekaj sve, vrednosti ne zanimaju"
+### `Mono.when` - "sačekaj sve, vrednosti ne zanimaju"
 
-Kao `zip`, ali ignoriše vrednosti — vraća `Mono<Void>` koji javlja
+Kao `zip`, ali ignoriše vrednosti - vraća `Mono<Void>` koji javlja
 `onComplete` tek kada **svi** izvori završe.
 
 ```java
@@ -367,7 +367,7 @@ Idealan za paralelno fire-and-forget: "izvrši sve ove async operacije,
 javi mi kad si gotov". Bez `Mono.when`-a, morali bismo `zip` pa
 `then()`, ili `flatMap` kombinacije.
 
-### `firstWithValue` — race, ko prvi taj prošao
+### `firstWithValue` - race, ko prvi taj prošao
 
 `Mono.firstWithValue(m1, m2, ...)` emituje **prvu vrednost** koja
 stigne iz bilo kog izvora; ostali se otkažu.
@@ -380,7 +380,7 @@ Mono<Cena> brza = Mono.firstWithValue(
 ```
 
 Klasičan slučaj: **redundantni pozivi ka više DC-ova** za isti
-podatak — uzmi prvi koji stigne, ostatak zaboravi. Postoji i
+podatak - uzmi prvi koji stigne, ostatak zaboravi. Postoji i
 `Flux.firstWithSignal` za prvi koji emituje **bilo koji** signal
 (value ili error).
 
@@ -400,10 +400,10 @@ podatak — uzmi prvi koji stigne, ostatak zaboravi. Postoji i
 
 ## 7. `buffer`, `window`, `groupBy`
 
-Operatori koji **menjaju strukturu** toka — od pojedinačnih elemenata
+Operatori koji **menjaju strukturu** toka - od pojedinačnih elemenata
 prave "paketiće" ili grupišu.
 
-### `buffer` — paketići u listu
+### `buffer` - paketići u listu
 
 ```java
 Flux.range(1, 7).buffer(3)
@@ -422,7 +422,7 @@ Flux.range(1, 20)
 Tipičan slučaj: **batch upis u bazu**, **agregacija metrika po
 sekundi**, **slanje WebSocket poruka u grupama radi efikasnosti**.
 
-### `window` — paketići kao unutrašnji `Flux`
+### `window` - paketići kao unutrašnji `Flux`
 
 Isto kao `buffer`, ali umesto `List<T>` emituje `Flux<T>`. Zato možemo
 **reaktivne operatore** primeniti na svaki prozor pre nego što
@@ -436,7 +436,7 @@ Flux.range(1, 10)
 //   → 6, 15, 24, 10
 ```
 
-### `groupBy` — particionisanje po ključu
+### `groupBy` - particionisanje po ključu
 
 Razdeli tok u **mnogo unutrašnjih `GroupedFlux`-eva**, po jedan za
 svaku vrednost ključa.
@@ -446,16 +446,16 @@ Flux<Dogadjaj> tok = ...;
 
 tok.groupBy(Dogadjaj::idKorisnika)
    .flatMap(group -> group
-        .concatMap(d -> obradi(d))               // unutar grupe — redom
-        .doOnNext(r -> log(group.key(), r)))     // izmedju grupa — paralelno
+        .concatMap(d -> obradi(d))               // unutar grupe - redom
+        .doOnNext(r -> log(group.key(), r)))     // izmedju grupa - paralelno
    .subscribe();
 ```
 
 Ovo je standardni pattern za **"ordered-per-key, parallel-across-keys"**
-— svaki user-id ima svoju nezavisnu obradu, ali događaji za jednog
+- svaki user-id ima svoju nezavisnu obradu, ali događaji za jednog
 user-a idu redom.
 
-> ⚠️ `groupBy` se MORA konzumirati — svaki `GroupedFlux` mora imati
+> ⚠️ `groupBy` se MORA konzumirati - svaki `GroupedFlux` mora imati
 > subscriber-a, inače backpressure zaglavi pipeline. Najlakše:
 > `flatMap` na izlazu, kao gore.
 
@@ -463,7 +463,7 @@ user-a idu redom.
 
 ---
 
-## 8. Brza referenca — koji operator kada
+## 8. Brza referenca - koji operator kada
 
 ### "Imam Flux, hoću za svaki element da pozovem async i da sakupim"
 
@@ -474,7 +474,7 @@ user-a idu redom.
 | brzo + redosled po ulazu | `flatMapSequential` |
 | samo poslednji ulaz nas zanima | `switchMap` |
 
-### "Imam Mono ili Flux<Iterable<T>> — kako da 'spljoštim'"
+### "Imam Mono ili Flux<Iterable<T>> - kako da 'spljoštim'"
 
 | Šta želim | Operator |
 |-----------|----------|
@@ -482,7 +482,7 @@ user-a idu redom.
 | Flux<List<T>> → Flux<T> (sinhrono) | `flatMapIterable` |
 | rekurzivno (paginacija, BFS po stablu) | `expand` / `expandDeep` |
 
-### "Imam više postojećih Flux/Mono — kako da spojim"
+### "Imam više postojećih Flux/Mono - kako da spojim"
 
 | Šta želim | Operator |
 |-----------|----------|
@@ -510,7 +510,7 @@ user-a idu redom.
 ## 9. Šta dolazi sledeće nedelje
 
 Do sada smo komponovali tokove **bez razmišljanja o nitima**. Sve je
-"nekako radilo" — `delayElements` je pokretao `Schedulers.parallel`,
+"nekako radilo" - `delayElements` je pokretao `Schedulers.parallel`,
 `flatMap` je davao paralelizam, itd. Sledeća nedelja sve to čini
 **eksplicitnim**:
 
@@ -529,7 +529,7 @@ Do sada smo komponovali tokove **bez razmišljanja o nitima**. Sve je
 |------|------|
 | [`FlatMapVariants.java`](FlatMapVariants.java) | `flatMap` / `concatMap` / `flatMapSequential`, paralelizam i redosled |
 | [`FlatMapFamily.java`](FlatMapFamily.java) | `flatMapMany` / `flatMapIterable` / `expand` (paginacija, BFS) |
-| [`SwitchMapDemo.java`](SwitchMapDemo.java) | `switchMap` — autocomplete, cancellation signal |
+| [`SwitchMapDemo.java`](SwitchMapDemo.java) | `switchMap` - autocomplete, cancellation signal |
 | [`MergeConcatDemo.java`](MergeConcatDemo.java) | `merge` / `concat` / `mergeSequential` / `startWith` |
 | [`ZipCombineLatestDemo.java`](ZipCombineLatestDemo.java) | `zip` / `combineLatest` / `withLatestFrom` |
 | [`BufferWindowGroupByDemo.java`](BufferWindowGroupByDemo.java) | `buffer` / `window` / `groupBy` |
@@ -540,8 +540,8 @@ Do sada smo komponovali tokove **bez razmišljanja o nitima**. Sve je
 
 ## Reference
 
-- Reactor Reference Guide — [Transforming and Filtering](https://projectreactor.io/docs/core/release/reference/#which-operator) (poglavlje koji-operator-kada)
-- Reactor Marble Diagrams — vizuelni dijagrami za svaki operator u [Javadoc-u](https://projectreactor.io/docs/core/release/api/reactor/core/publisher/Flux.html)
-- Project Reactor course (E. Herrera) — [eherrera.net/project-reactor-course](https://eherrera.net/project-reactor-course/)
+- Reactor Reference Guide - [Transforming and Filtering](https://projectreactor.io/docs/core/release/reference/#which-operator) (poglavlje koji-operator-kada)
+- Reactor Marble Diagrams - vizuelni dijagrami za svaki operator u [Javadoc-u](https://projectreactor.io/docs/core/release/api/reactor/core/publisher/Flux.html)
+- Project Reactor course (E. Herrera) - [eherrera.net/project-reactor-course](https://eherrera.net/project-reactor-course/)
 
 ---

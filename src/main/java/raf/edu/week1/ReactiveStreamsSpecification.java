@@ -5,7 +5,7 @@ import java.util.concurrent.Flow;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
- * Nedelja 1 — Reactive Streams specifikacija (Java Flow API)
+ * Nedelja 1 - Reactive Streams specifikacija (Java Flow API)
  *
  * Ručna implementacija Publisher-a i Subscriber-a, BEZ ikakve biblioteke.
  * Cilj: razumeti tačan protokol signala i ulogu Subscription-a.
@@ -36,12 +36,12 @@ public class ReactiveStreamsSpecification {
 
         publisher.subscribe(new LoggingSubscriber<>(2));   // request po 2 elementa
 
-        System.out.println("\n=== Posle prvog dela — Subscriber je tražio još ===");
+        System.out.println("\n=== Posle prvog dela - Subscriber je tražio još ===");
         // Vidi se u logu kako request kontroliše tempo.
     }
 
     // -----------------------------------------------------------------------
-    // IterablePublisher — emituje elemente iz Iterable, jedan po jedan,
+    // IterablePublisher - emituje elemente iz Iterable, jedan po jedan,
     // poštujući request(n).
     // -----------------------------------------------------------------------
     static class IterablePublisher<T> implements Flow.Publisher<T> {
@@ -59,7 +59,7 @@ public class ReactiveStreamsSpecification {
     }
 
     // -----------------------------------------------------------------------
-    // IterableSubscription — drži stanje (gde smo stali) i implementira
+    // IterableSubscription - drži stanje (gde smo stali) i implementira
     // request / cancel.
     // -----------------------------------------------------------------------
     static class IterableSubscription<T> implements Flow.Subscription {
@@ -77,7 +77,7 @@ public class ReactiveStreamsSpecification {
         public void request(long n) {
             if (n <= 0) {
                 subscriber.onError(new IllegalArgumentException(
-                        "request(n) sa n <= 0 je zabranjen — Reactive Streams pravilo 3.9"));
+                        "request(n) sa n <= 0 je zabranjen - Reactive Streams pravilo 3.9"));
                 return;
             }
             // Dodaj n u "kredit" i pokušaj da emituješ koliko god je slobodno.
@@ -98,7 +98,7 @@ public class ReactiveStreamsSpecification {
                 subscriber.onNext(value);
             }
             if (!canceled && !it.hasNext()) {
-                // Spec: posle terminalnog signala — niko ne sme više ništa.
+                // Spec: posle terminalnog signala - niko ne sme više ništa.
                 canceled = true;
                 subscriber.onComplete();
             }
@@ -106,8 +106,8 @@ public class ReactiveStreamsSpecification {
     }
 
     // -----------------------------------------------------------------------
-    // LoggingSubscriber — prima signale, loguje, i traži dalje po batch-evima.
-    // Ovo je KLJUČNI deo backpressure-a — Subscriber sam diktira koliko
+    // LoggingSubscriber - prima signale, loguje, i traži dalje po batch-evima.
+    // Ovo je KLJUČNI deo backpressure-a - Subscriber sam diktira koliko
     // je spreman da primi.
     // -----------------------------------------------------------------------
     static class LoggingSubscriber<T> implements Flow.Subscriber<T> {
@@ -123,7 +123,7 @@ public class ReactiveStreamsSpecification {
         @Override
         public void onSubscribe(Flow.Subscription subscription) {
             this.subscription = subscription;
-            System.out.println("  [onSubscribe] kreće protok — tražim prvi batch od " + batchSize);
+            System.out.println("  [onSubscribe] kreće protok - tražim prvi batch od " + batchSize);
             subscription.request(batchSize);
         }
 

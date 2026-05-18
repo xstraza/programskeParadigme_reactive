@@ -8,9 +8,9 @@ import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 
 /**
- * Nedelja 2 — operatori kojih NEMA u Stream-u.
+ * Nedelja 2 - operatori kojih NEMA u Stream-u.
  *
- * Stream API ne zna ništa o vremenu — sve se "desi sad". Reactor-u
+ * Stream API ne zna ništa o vremenu - sve se "desi sad". Reactor-u
  * je vreme prvoklasni pojam. Ovde su operatori koji eksplicitno
  * koriste vreme i operatori koji rade sa "praznim tokom".
  *
@@ -26,27 +26,27 @@ public class VremenskiOperatori {
     private static final DateTimeFormatter HHMMSS = DateTimeFormatter.ofPattern("HH:mm:ss.SSS");
 
     public static void main(String[] args) {
-        System.out.println("=== 1. delayElements — razmak između emisija ===\n");
+        System.out.println("=== 1. delayElements - razmak između emisija ===\n");
         delayElementsDemo();
 
-        System.out.println("\n=== 2. delaySubscription — kasni početak ===\n");
+        System.out.println("\n=== 2. delaySubscription - kasni početak ===\n");
         delaySubscriptionDemo();
 
-        System.out.println("\n=== 3. timeout — padaj ako predugo traje ===\n");
+        System.out.println("\n=== 3. timeout - padaj ako predugo traje ===\n");
         timeoutDemo();
 
-        System.out.println("\n=== 4. take/skip(Duration) — vremenski prozor ===\n");
+        System.out.println("\n=== 4. take/skip(Duration) - vremenski prozor ===\n");
         takeSkipDuration();
 
         System.out.println("\n=== 5. defaultIfEmpty / switchIfEmpty ===\n");
         emptyFallback();
 
-        System.out.println("\n=== 6. repeat — ponovi tok ===\n");
+        System.out.println("\n=== 6. repeat - ponovi tok ===\n");
         repeatDemo();
     }
 
     // -------------------------------------------------------------------
-    // delayElements — razmak između sukcesivnih emisija.
+    // delayElements - razmak između sukcesivnih emisija.
     // Vremenski razvuče "Stream-like" izvor da liči na realan event tok.
     // -------------------------------------------------------------------
     static void delayElementsDemo() {
@@ -57,7 +57,7 @@ public class VremenskiOperatori {
     }
 
     // -------------------------------------------------------------------
-    // delaySubscription — odlaže ceo subscribe (kao da kasnimo da
+    // delaySubscription - odlaže ceo subscribe (kao da kasnimo da
     // pokrenemo).
     // -------------------------------------------------------------------
     static void delaySubscriptionDemo() {
@@ -70,13 +70,13 @@ public class VremenskiOperatori {
     }
 
     // -------------------------------------------------------------------
-    // timeout — ako se sledeća emisija ne desi za dato vreme, padne
+    // timeout - ako se sledeća emisija ne desi za dato vreme, padne
     // sa TimeoutException.
     //
     // Tipičan slučaj: HTTP poziv koji visi.
     // -------------------------------------------------------------------
     static void timeoutDemo() {
-        // (a) Brz tok — uspe.
+        // (a) Brz tok - uspe.
         Mono.just("ok")
                 .delayElement(Duration.ofMillis(100))
                 .timeout(Duration.ofMillis(500))
@@ -84,7 +84,7 @@ public class VremenskiOperatori {
                         v   -> log("timeout-ok", v),
                         err -> log("timeout-ok", "ERROR: " + err));
 
-        // (b) Spor tok — pukne.
+        // (b) Spor tok - pukne.
         try {
             Mono.just("kasnim")
                     .delayElement(Duration.ofMillis(500))
@@ -97,8 +97,8 @@ public class VremenskiOperatori {
     }
 
     // -------------------------------------------------------------------
-    // take(Duration) — uzmi sve što stigne za dato vreme, pa onComplete.
-    // skip(Duration) — ignorisi prvih T, pa propusti ostalo.
+    // take(Duration) - uzmi sve što stigne za dato vreme, pa onComplete.
+    // skip(Duration) - ignorisi prvih T, pa propusti ostalo.
     // -------------------------------------------------------------------
     static void takeSkipDuration() {
         log("take(Duration)", "uzimam sve sto stigne za 350ms iz interval-a 100ms:");
@@ -116,10 +116,10 @@ public class VremenskiOperatori {
     }
 
     // -------------------------------------------------------------------
-    // defaultIfEmpty / switchIfEmpty — kad tok završi prazan.
+    // defaultIfEmpty / switchIfEmpty - kad tok završi prazan.
     //
-    // defaultIfEmpty(T)         — emituje T ako je tok bio prazan.
-    // switchIfEmpty(Mono/Flux)  — prebaci se na drugi izvor ako prazan.
+    // defaultIfEmpty(T)         - emituje T ako je tok bio prazan.
+    // switchIfEmpty(Mono/Flux)  - prebaci se na drugi izvor ako prazan.
     //
     // switchIfEmpty je idealan za FALLBACK CHAIN (kes -> baza -> API).
     // -------------------------------------------------------------------
@@ -128,7 +128,7 @@ public class VremenskiOperatori {
                 .defaultIfEmpty("default-vrednost")
                 .subscribe(v -> System.out.println("  [defaultIfEmpty]  " + v));
 
-        // Fallback chain — kad prvi izvor prazan, pokušaj drugi, pa treći.
+        // Fallback chain - kad prvi izvor prazan, pokušaj drugi, pa treći.
         nadjiUKesu()
                 .switchIfEmpty(nadjiUBazi())
                 .switchIfEmpty(nadjiPrekoApija())
@@ -136,22 +136,22 @@ public class VremenskiOperatori {
     }
 
     static Mono<String> nadjiUKesu() {
-        System.out.println("  [chain] proverim kes — prazan");
+        System.out.println("  [chain] proverim kes - prazan");
         return Mono.empty();
     }
 
     static Mono<String> nadjiUBazi() {
-        System.out.println("  [chain] proverim bazu — prazan");
+        System.out.println("  [chain] proverim bazu - prazan");
         return Mono.empty();
     }
 
     static Mono<String> nadjiPrekoApija() {
-        System.out.println("  [chain] zovnem API — našao!");
+        System.out.println("  [chain] zovnem API - našao!");
         return Mono.just("vrednost-iz-API-ja");
     }
 
     // -------------------------------------------------------------------
-    // repeat — ponovi tok N puta. Okida se na onComplete (NE na error).
+    // repeat - ponovi tok N puta. Okida se na onComplete (NE na error).
     // -------------------------------------------------------------------
     static void repeatDemo() {
         Flux.just("ping")

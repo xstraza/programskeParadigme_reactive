@@ -8,7 +8,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.List;
 
 /**
- * Nedelja 1 — Stream API vs. Reactive Stream
+ * Nedelja 1 - Stream API vs. Reactive Stream
  *
  * Side-by-side poređenje. ISTI pipeline:
  *   1, 2, 3, 4, 5, 6
@@ -23,28 +23,28 @@ import java.util.List;
  *   - Operatori map / filter imaju identično značenje.
  *
  * Cilj demo-a: studenti vide da se reaktivni operatori ne uče "ispočetka"
- * — to je isto što i Stream, samo sa vremenom kao prvoklasnim pojmom.
+ * - to je isto što i Stream, samo sa vremenom kao prvoklasnim pojmom.
  */
 public class StreamVsReactive {
 
     private static final DateTimeFormatter HHMMSS = DateTimeFormatter.ofPattern("HH:mm:ss.SSS");
 
     public static void main(String[] args) {
-        System.out.println("=== Stream<Integer> — sinhrono, sve odmah ===\n");
+        System.out.println("=== Stream<Integer> - sinhrono, sve odmah ===\n");
         streamVerzija();
 
-        System.out.println("\n=== Flux<Integer> — sinhrono, sve odmah (bez delay-a) ===\n");
+        System.out.println("\n=== Flux<Integer> - sinhrono, sve odmah (bez delay-a) ===\n");
         fluxBezDelay();
 
-        System.out.println("\n=== Flux<Integer> — sa delayElements (300ms) — vremenski razvučeno ===\n");
+        System.out.println("\n=== Flux<Integer> - sa delayElements (300ms) - vremenski razvučeno ===\n");
         fluxSaDelay();
 
-        System.out.println("\n=== Glavna pouka — operatori isti, kontekst drugačiji ===\n");
+        System.out.println("\n=== Glavna pouka - operatori isti, kontekst drugačiji ===\n");
         zakljucak();
     }
 
     // -----------------------------------------------------------------------
-    // Stream — pull, sinhrono. Terminalna operacija (forEach) "vuče"
+    // Stream - pull, sinhrono. Terminalna operacija (forEach) "vuče"
     // elemente kroz pipeline.
     // -----------------------------------------------------------------------
     static void streamVerzija() {
@@ -59,7 +59,7 @@ public class StreamVsReactive {
     }
 
     // -----------------------------------------------------------------------
-    // Flux bez delay-a — sinhrono kad se subscribe-uje na main niti.
+    // Flux bez delay-a - sinhrono kad se subscribe-uje na main niti.
     // Vidi se da i bez delay-a, model je push: subscribe pokreće tok,
     // operator-i ne "vuku" elemente.
     // -----------------------------------------------------------------------
@@ -75,10 +75,10 @@ public class StreamVsReactive {
     }
 
     // -----------------------------------------------------------------------
-    // Flux sa delayElements — sad razlika postaje očigledna.
+    // Flux sa delayElements - sad razlika postaje očigledna.
     // Tok stiže kroz vreme. block() na kraju je tu samo da main čeka
     // dok se tok ne završi (u realnoj aplikaciji nikad ne bismo
-    // blokirali — videti komentar dole).
+    // blokirali - videti komentar dole).
     // -----------------------------------------------------------------------
     static void fluxSaDelay() {
         long start = System.currentTimeMillis();
@@ -112,8 +112,8 @@ public class StreamVsReactive {
                   - filter(Predicate<T>) i map(Function<T, R>) imaju ISTO značenje
                     i u Stream-u i u Flux-u. Učimo apstrakciju, ne sintaksu.
                   - Razlika je u tome KAD i KAKO elementi stižu:
-                      * Stream — pull, sve odmah, jedna nit.
-                      * Flux   — push, kroz vreme, scheduler bira nit.
+                      * Stream - pull, sve odmah, jedna nit.
+                      * Flux   - push, kroz vreme, scheduler bira nit.
                   - block()/blockLast() koristimo SAMO u demo/test kodu.
                     U produkciji subscribe vraća kontrolu i tok teče u pozadini.
                 """);

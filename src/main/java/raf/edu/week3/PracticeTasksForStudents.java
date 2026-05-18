@@ -1,7 +1,7 @@
 package raf.edu.week3;
 
 /**
- * Nedelja 3 — zadaci za samostalnu vežbu.
+ * Nedelja 3 - zadaci za samostalnu vežbu.
  *
  * Tema: transformacije i kombinacije tokova
  *   - flatMap / concatMap / switchMap
@@ -11,7 +11,7 @@ package raf.edu.week3;
  *
  * Svaki zadatak ima:
  *   - kratak opis (šta treba)
- *   - "očekivani izlaz" — približno kako bi trebalo da izgleda ispis
+ *   - "očekivani izlaz" - približno kako bi trebalo da izgleda ispis
  *   - prazno mesto za rešenje (TODO)
  *
  * Rešenja su u {@link PracticeTasksSolutions}.
@@ -34,7 +34,7 @@ public class PracticeTasksForStudents {
     }
 
     // ===================================================================
-    // Zadatak 1 — flatMap sa Mono (fetch by id)
+    // Zadatak 1 - flatMap sa Mono (fetch by id)
     //
     // Dat je Flux<Integer> userIds = Flux.just(1, 2, 3, 4, 5).
     // Napiši pomoćnu metodu Mono<String> fetchUser(int id) koja simulira
@@ -51,7 +51,7 @@ public class PracticeTasksForStudents {
     }
 
     // ===================================================================
-    // Zadatak 2 — concatMap (redosled bitan)
+    // Zadatak 2 - concatMap (redosled bitan)
     //
     // Isti zadatak kao 1, ali sada redosled MORA biti 1..5.
     // Zameni flatMap sa concatMap. Probaj oba i uveri se da je razlika
@@ -66,13 +66,13 @@ public class PracticeTasksForStudents {
     }
 
     // ===================================================================
-    // Zadatak 3 — switchMap (autocomplete)
+    // Zadatak 3 - switchMap (autocomplete)
     //
     // Simuliraj korisnika koji kuca: tok upita ["B", "Be", "Beo", "Beog"]
     // sa razmakom 50ms. Za svaki upit napravi Mono koji vraća
     // "rezultat za <upit>" sa delay-em 200ms.
     //
-    // Cilj: u rezultatu da vidiš SAMO "rezultat za Beog" — sve ostalo
+    // Cilj: u rezultatu da vidiš SAMO "rezultat za Beog" - sve ostalo
     // je otkazano. Koristi doOnCancel da dodatno potvrdiš.
     // ===================================================================
     static void zadatak3() {
@@ -80,7 +80,7 @@ public class PracticeTasksForStudents {
     }
 
     // ===================================================================
-    // Zadatak 4 — Promise.all sa Mono.zip
+    // Zadatak 4 - Promise.all sa Mono.zip
     //
     // Simuliraj 3 nezavisna async poziva:
     //   - profile()  -> Mono<String>, traje 300ms, vraća "profile"
@@ -98,7 +98,7 @@ public class PracticeTasksForStudents {
     }
 
     // ===================================================================
-    // Zadatak 5 — combineLatest (UI state)
+    // Zadatak 5 - combineLatest (UI state)
     //
     // Simuliraj dva UI input-a:
     //   - textInput: Flux.just("a", "ab", "abc") sa delay 200ms
@@ -116,7 +116,7 @@ public class PracticeTasksForStudents {
     }
 
     // ===================================================================
-    // Zadatak 6 — merge dva event toka
+    // Zadatak 6 - merge dva event toka
     //
     // Imamo dva nezavisna izvora događaja:
     //   - "klikovi":  Flux.interval(150ms) sa take(5), mapiran u
@@ -135,16 +135,16 @@ public class PracticeTasksForStudents {
     }
 
     // ===================================================================
-    // Zadatak 7 — buffer (batch obrada)
+    // Zadatak 7 - buffer (batch obrada)
     //
     // Simuliraj tok od 20 stavki (Flux.range(1, 20)) sa delay 50ms.
     // Grupiši ih u "batch"-ove od po 5 i ispiši svaki batch kao List.
     //
-    // Onda promeni — grupiši po VREMENU (buffer(Duration.ofMillis(200)))
+    // Onda promeni - grupiši po VREMENU (buffer(Duration.ofMillis(200)))
     // i uporedi rezultate.
     //
     // Pitanje: koja od dve varijante je pogodnija za "saljemo batch upis
-    // svakih 200ms ili kad nakupimo 5 stavki — što god prvo"? (odgovor:
+    // svakih 200ms ili kad nakupimo 5 stavki - što god prvo"? (odgovor:
     // bufferTimeout)
     // ===================================================================
     static void zadatak7() {
@@ -152,7 +152,7 @@ public class PracticeTasksForStudents {
     }
 
     // ===================================================================
-    // Zadatak 8 — groupBy + paralelna obrada
+    // Zadatak 8 - groupBy + paralelna obrada
     //
     // Dat je Flux<String> rec = Flux.just(
     //     "ana", "ALEKSANDAR", "Marko", "milan", "PETAR", "pavle", "Jovana"
@@ -165,15 +165,15 @@ public class PracticeTasksForStudents {
     // Ispiši: "slovo X -> [REC1, REC2, ...]" za svaku grupu.
     //
     // BONUS: dodaj .doOnNext u svakoj particiji da vidiš da li se
-    // grupe obrađuju paralelno ili serijski. (Bez subscribeOn — to je
-    // tema nedelje 4 — sve je na jednoj niti.)
+    // grupe obrađuju paralelno ili serijski. (Bez subscribeOn - to je
+    // tema nedelje 4 - sve je na jednoj niti.)
     // ===================================================================
     static void zadatak8() {
         // TODO
     }
 
     // ===================================================================
-    // Zadatak 9 — expand za paginaciju API-ja
+    // Zadatak 9 - expand za paginaciju API-ja
     //
     // Simuliraj API koji vraća stranice rezultata. Svaka stranica zna
     // svoj broj i da li postoji sledeća. Napravi:
@@ -195,7 +195,7 @@ public class PracticeTasksForStudents {
     }
 
     // ===================================================================
-    // Zadatak 10 — flatMapIterable
+    // Zadatak 10 - flatMapIterable
     //
     // Imaš Flux<List<Integer>>:
     //   Flux.just(List.of(1,2,3), List.of(4), List.of(), List.of(5,6))
@@ -203,8 +203,8 @@ public class PracticeTasksForStudents {
     // Pomoću flatMapIterable, pretvori u Flux<Integer> i ispiši.
     // Očekivani izlaz: 1, 2, 3, 4, 5, 6 (prazna lista se "preskoči").
     //
-    // Probaj i sa flatMap + Flux.fromIterable — vidi da li je rezultat
-    // isti. (Jeste — ali flatMapIterable je čitkiji i ne pokreće
+    // Probaj i sa flatMap + Flux.fromIterable - vidi da li je rezultat
+    // isti. (Jeste - ali flatMapIterable je čitkiji i ne pokreće
     // unutrašnji Publisher.)
     // ===================================================================
     static void zadatak10() {

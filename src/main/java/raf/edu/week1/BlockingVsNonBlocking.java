@@ -12,7 +12,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * Nedelja 1 — Blokirajući vs. neblokirajući model
+ * Nedelja 1 - Blokirajući vs. neblokirajući model
  *
  * Konkretizacija "Era 2 vs. Era 4" iz README-a, sekcija 2:
  *  - Era 2 (thread-per-request): nit BLOKIRA dok čeka. 100 paralelnih
@@ -25,12 +25,12 @@ import java.util.concurrent.atomic.AtomicInteger;
  * Idealno (potpuno paralelno) vreme: 200 ms.
  *
  * Demonstriramo tri scenarija:
- *  1. blockingThreadPerRequest — 1 nit po pozivu (Era 2 maksimum).
- *  2. blockingFixedPool         — pool od 8 niti (Era 2 ekonomično).
- *  3. nonBlockingReactor        — Mono.delay (Era 4).
+ *  1. blockingThreadPerRequest - 1 nit po pozivu (Era 2 maksimum).
+ *  2. blockingFixedPool         - pool od 8 niti (Era 2 ekonomično).
+ *  3. nonBlockingReactor        - Mono.delay (Era 4).
  *
  * Cilj: u konzoli jasno videti "peak thread count" i ukupno vreme,
- * pa izvući zaključak. Ovo nije teorija — to su brojevi.
+ * pa izvući zaključak. Ovo nije teorija - to su brojevi.
  */
 public class BlockingVsNonBlocking {
 
@@ -54,16 +54,16 @@ public class BlockingVsNonBlocking {
         System.out.println("\n=== Zaključci ===");
         System.out.println("""
                   - Verzija 1 dostiže ~200ms ALI po cenu ~100 fizičkih niti.
-                    Skalira do nekoliko hiljada — pa pada (OOM, context switch).
+                    Skalira do nekoliko hiljada - pa pada (OOM, context switch).
                   - Verzija 2 troši samo 8 niti, ali zato traje N/8 batch-eva.
                     Ekonomično, ali sporo na čekanju.
                   - Verzija 3 ima oba: malo niti I brzo. Trik nije magija
-                    — Mono.delay NE drži nit, prijavi se timer-u i pusti.
+                    - Mono.delay NE drži nit, prijavi se timer-u i pusti.
                 """);
     }
 
     // -----------------------------------------------------------------------
-    // Verzija 1 — thread-per-request.
+    // Verzija 1 - thread-per-request.
     // 100 niti istovremeno, svaka spava 200ms. Vreme: ~200ms.
     // Cena: ~100 paralelnih niti u VM-u (svaka ~1MB stack-a).
     // -----------------------------------------------------------------------
@@ -71,7 +71,7 @@ public class BlockingVsNonBlocking {
         AtomicInteger peakThreads = new AtomicInteger(0);
         long start = System.currentTimeMillis();
 
-        // Sampler — tokom rada periodično meri broj aktivnih niti.
+        // Sampler - tokom rada periodično meri broj aktivnih niti.
         Thread sampler = pokreniSamplerNiti(peakThreads);
 
         List<Thread> threads = new ArrayList<>();
@@ -92,8 +92,8 @@ public class BlockingVsNonBlocking {
     }
 
     // -----------------------------------------------------------------------
-    // Verzija 2 — fiksni pool od 8 niti.
-    // 100 poziva mora kroz 8 niti — N/8 = ~13 batch-eva po 200ms.
+    // Verzija 2 - fiksni pool od 8 niti.
+    // 100 poziva mora kroz 8 niti - N/8 = ~13 batch-eva po 200ms.
     // Vreme: ~13 × 200 = ~2600ms. Niti: 8.
     // -----------------------------------------------------------------------
     static void blockingFixedPool() throws Exception {
@@ -124,8 +124,8 @@ public class BlockingVsNonBlocking {
     }
 
     // -----------------------------------------------------------------------
-    // Verzija 3 — Reactor Mono.delay.
-    // delay NE BLOKIRA nit — prijavi se internom timer-u i nit oslobodi.
+    // Verzija 3 - Reactor Mono.delay.
+    // delay NE BLOKIRA nit - prijavi se internom timer-u i nit oslobodi.
     // Sa parallel scheduler-om (~ broj CPU-a niti), 100 paralelnih
     // "poziva" završi za ~200ms. Niti: ~ broj CPU-a.
     // -----------------------------------------------------------------------
@@ -148,11 +148,11 @@ public class BlockingVsNonBlocking {
         System.out.printf("  Ukupno vreme: %d ms%n", duration);
         System.out.printf("  Procesirano 'poziva': %d%n", uradjeno);
         System.out.printf("  Peak broj aktivnih niti tokom rada: %d%n", peakThreads.get());
-        System.out.println("  (Reactor parallel scheduler ima ~ broj CPU-a niti — vidi peak)");
+        System.out.println("  (Reactor parallel scheduler ima ~ broj CPU-a niti - vidi peak)");
     }
 
     // -----------------------------------------------------------------------
-    // Pomoćna metoda — startuje sampler nit koja na svakih 5ms zabeleži
+    // Pomoćna metoda - startuje sampler nit koja na svakih 5ms zabeleži
     // trenutni Thread.activeCount() i ažurira peak. Nije precizan
     // benchmark, ali za demo dovoljno.
     // -----------------------------------------------------------------------

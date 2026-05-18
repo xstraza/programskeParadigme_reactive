@@ -6,30 +6,30 @@ import reactor.core.publisher.Mono;
 import java.util.List;
 
 /**
- * Nedelja 2 — Mono&lt;T&gt; vs. Flux&lt;T&gt;.
+ * Nedelja 2 - Mono&lt;T&gt; vs. Flux&lt;T&gt;.
  *
  * Dva glavna tipa izvora u Project Reactor-u:
- *   - Mono<T>; — 0 ili 1 element + onComplete/onError
- *   - Flux<T>; — 0..N elemenata + onComplete/onError
+ *   - Mono<T>; - 0 ili 1 element + onComplete/onError
+ *   - Flux<T>; - 0..N elemenata + onComplete/onError
  *
  * Razdvojeni su NAMERNO (mogli su imati samo Flux). Razlog: tipska
- * tačnost — kompajler i čitač kôda znaju ako će biti najviše jedan
+ * tačnost - kompajler i čitač kôda znaju ako će biti najviše jedan
  * element.
  *
  * Demo pokriva:
- *   1. Tipičan Mono — jedan rezultat (npr. HTTP GET).
- *   2. Tipičan Flux — više elemenata (npr. lista iz baze).
- *   3. Mono.empty / Flux.empty — terminalni signal bez vrednosti.
- *   4. Mono.error / Flux.error — terminalni signal sa greškom.
+ *   1. Tipičan Mono - jedan rezultat (npr. HTTP GET).
+ *   2. Tipičan Flux - više elemenata (npr. lista iz baze).
+ *   3. Mono.empty / Flux.empty - terminalni signal bez vrednosti.
+ *   4. Mono.error / Flux.error - terminalni signal sa greškom.
  *   5. Konverzije: Flux -&gt; Mono i Mono -&gt; Flux.
  */
 public class MonoVsFluxDemo {
 
     public static void main(String[] args) {
-        System.out.println("=== 1. Mono — 0 ili 1 element ===\n");
+        System.out.println("=== 1. Mono - 0 ili 1 element ===\n");
         monoBasic();
 
-        System.out.println("\n=== 2. Flux — 0..N elemenata ===\n");
+        System.out.println("\n=== 2. Flux - 0..N elemenata ===\n");
         fluxBasic();
 
         System.out.println("\n=== 3. Prazni tokovi ===\n");
@@ -43,7 +43,7 @@ public class MonoVsFluxDemo {
     }
 
     // -------------------------------------------------------------------
-    // Mono — kao Optional<CompletableFuture<T>>. Tipično:
+    // Mono - kao Optional<CompletableFuture<T>>. Tipično:
     //   - jedan REST poziv:        Mono<UserDTO>
     //   - jedan red iz baze:       Mono<Order>
     //   - "uradi i javi gotov":    Mono<Void>
@@ -59,7 +59,7 @@ public class MonoVsFluxDemo {
     }
 
     // -------------------------------------------------------------------
-    // Flux — kao Stream koji teče kroz vreme. Tipično:
+    // Flux - kao Stream koji teče kroz vreme. Tipično:
     //   - lista korisnika:         Flux<User>
     //   - WebSocket poruke:        Flux<Message>
     //   - tikovi tajmera:          Flux<Long>
@@ -92,7 +92,7 @@ public class MonoVsFluxDemo {
     }
 
     // -------------------------------------------------------------------
-    // Greška u reaktivnom svetu nije bačeni izuzetak — to je SIGNAL
+    // Greška u reaktivnom svetu nije bačeni izuzetak - to je SIGNAL
     // u toku, ekvivalentan onComplete-u, samo terminalan na drugi način.
     // -------------------------------------------------------------------
     static void errorDemo() {
@@ -107,15 +107,15 @@ public class MonoVsFluxDemo {
     // Konverzije.
     // -------------------------------------------------------------------
     static void conversions() {
-        // Flux -> Mono.next() — uzmi prvi element, ostatak ignoriši
+        // Flux -> Mono.next() - uzmi prvi element, ostatak ignoriši
         Mono<Integer> prvi = Flux.range(10, 5).next();
         System.out.println("  [Flux.next()] prvi: " + prvi.block());
 
-        // Flux -> Mono.collectList() — sakupi sve u List, vrati Mono<List>
+        // Flux -> Mono.collectList() - sakupi sve u List, vrati Mono<List>
         Mono<List<Integer>> svi = Flux.range(10, 5).collectList();
         System.out.println("  [Flux.collectList()] svi: " + svi.block());
 
-        // Mono -> Flux — samo "podigni" tip
+        // Mono -> Flux - samo "podigni" tip
         Flux<String> kaoFlux = Mono.just("samo-jedan").flux();
         kaoFlux.subscribe(v -> System.out.println("  [Mono.flux()] onNext: " + v));
     }

@@ -7,18 +7,18 @@ import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 
 /**
- * Nedelja 3 — merge, concat, mergeSequential.
+ * Nedelja 3 - merge, concat, mergeSequential.
  *
  * Sva tri operatora KOMBINUJU vise Flux-eva u jedan rezultujuci Flux.
  * Razlikuju se po REDOSLEDU emisija u rezultatu:
  *
- *   merge            — pretplati se na sve odmah, INTERLEAVE-uj rezultate
+ *   merge            - pretplati se na sve odmah, INTERLEAVE-uj rezultate
  *                      onako kako stizu kroz vreme. Paralelno.
  *
- *   concat           — pretplati se na PRVI, sacekaj njegov onComplete,
+ *   concat           - pretplati se na PRVI, sacekaj njegov onComplete,
  *                      pa onda na sledeci, itd. Strogi redosled.
  *
- *   mergeSequential  — pretplati se na sve odmah (paralelno), ali bafera
+ *   mergeSequential  - pretplati se na sve odmah (paralelno), ali bafera
  *                      rezultate i izlaze ih u redosledu IZVORA.
  *
  * Razlika izmedju merge/concat i flatMap/concatMap: ovi rade nad
@@ -36,27 +36,27 @@ public class MergeConcatDemo {
     private static final DateTimeFormatter HHMMSS = DateTimeFormatter.ofPattern("HH:mm:ss.SSS");
 
     public static void main(String[] args) {
-        System.out.println("=== 1. merge — paralelno, interleaving ===\n");
+        System.out.println("=== 1. merge - paralelno, interleaving ===\n");
         mergeDemo();
 
-        System.out.println("\n=== 2. concat — serijski, redosled izvora ===\n");
+        System.out.println("\n=== 2. concat - serijski, redosled izvora ===\n");
         concatDemo();
 
-        System.out.println("\n=== 3. mergeSequential — paralelno + redosled izvora ===\n");
+        System.out.println("\n=== 3. mergeSequential - paralelno + redosled izvora ===\n");
         mergeSequentialDemo();
 
-        System.out.println("\n=== 4. mergeWith / concatWith — instance metode ===\n");
+        System.out.println("\n=== 4. mergeWith / concatWith - instance metode ===\n");
         instanceMethodsDemo();
 
-        System.out.println("\n=== 5. startWith / concatWithValues — dodaj na pocetak/kraj ===\n");
+        System.out.println("\n=== 5. startWith / concatWithValues - dodaj na pocetak/kraj ===\n");
         startWithDemo();
 
-        System.out.println("\n=== 6. concat sa greskom — prekida lanac ===\n");
+        System.out.println("\n=== 6. concat sa greskom - prekida lanac ===\n");
         concatErrorDemo();
     }
 
     // -------------------------------------------------------------------
-    // merge — sva tri toka rade paralelno. Brzi toc pobegne sporom.
+    // merge - sva tri toka rade paralelno. Brzi toc pobegne sporom.
     //
     // Ovde fluxA emituje na svakih 100ms, fluxB na svakih 150ms.
     // Ispis: rezultati pomesani po vremenu.
@@ -73,8 +73,8 @@ public class MergeConcatDemo {
     }
 
     // -------------------------------------------------------------------
-    // concat — fluxB ne pocinje dok fluxA ne zavrsi.
-    // Ispis: A1, A2, A3, B1, B2, B3 — bez obzira na to sto je B brzi
+    // concat - fluxB ne pocinje dok fluxA ne zavrsi.
+    // Ispis: A1, A2, A3, B1, B2, B3 - bez obzira na to sto je B brzi
     // ili sporiji.
     // -------------------------------------------------------------------
     static void concatDemo() {
@@ -89,7 +89,7 @@ public class MergeConcatDemo {
     }
 
     // -------------------------------------------------------------------
-    // mergeSequential — oba toka su odmah pokrenuta (paralelno), ali
+    // mergeSequential - oba toka su odmah pokrenuta (paralelno), ali
     // izlazni redosled je: svi A pa svi B. Brzi B je "cekao" sve A da
     // izadju, iako su mu rezultati spremni ranije.
     //
@@ -107,7 +107,7 @@ public class MergeConcatDemo {
     }
 
     // -------------------------------------------------------------------
-    // mergeWith / concatWith — verzije gde se "ulancavanje" radi nad
+    // mergeWith / concatWith - verzije gde se "ulancavanje" radi nad
     // postojecim Flux-om. Citljivije kad imamo glavni tok i jedan
     // dodatni izvor.
     // -------------------------------------------------------------------
@@ -125,8 +125,8 @@ public class MergeConcatDemo {
     }
 
     // -------------------------------------------------------------------
-    // startWith — ubaci vrednost(i) na POCETAK toka.
-    // concatWithValues — analog na kraju.
+    // startWith - ubaci vrednost(i) na POCETAK toka.
+    // concatWithValues - analog na kraju.
     //
     // Cesto se koristi za "init" vrednost (npr. UI state koji prvo
     // mora da emituje "loading" pa onda prave podatke).
@@ -145,7 +145,7 @@ public class MergeConcatDemo {
     //
     // merge se ponasa slicno (default), ali ima i mergeDelayError koji
     // odlozi gresku da ne prekine ostale tokove. Za detalje o error
-    // handling-u — nedelja 5.
+    // handling-u - nedelja 5.
     // -------------------------------------------------------------------
     static void concatErrorDemo() {
         Flux<String> fluxA = Flux.concat(

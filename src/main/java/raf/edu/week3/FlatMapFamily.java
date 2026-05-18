@@ -9,23 +9,23 @@ import java.time.format.DateTimeFormatter;
 import java.util.List;
 
 /**
- * Nedelja 3 — šira porodica flatMap-a.
+ * Nedelja 3 - šira porodica flatMap-a.
  *
  * Pored flatMap / concatMap / flatMapSequential (videti
  * {@link FlatMapVariants}), Reactor ima još tri operatora koja u
  * istoj familiji rešavaju specifične potrebe:
  *
- *   flatMapMany       — Mono<T> → Flux<R>. "Jedan element u mnogo."
+ *   flatMapMany       - Mono<T> → Flux<R>. "Jedan element u mnogo."
  *                       Tipično: jedan HTTP poziv vrati listu, hoću
  *                       svaki red kao zaseban Flux element.
  *
- *   flatMapIterable   — Flux<T> sa T = Iterable<R>, daje Flux<R>.
+ *   flatMapIterable   - Flux<T> sa T = Iterable<R>, daje Flux<R>.
  *                       Brži i citkiji nego flatMap(x -&gt; Flux.fromIterable(x)).
  *                       Bez asinhronog "spinanja" unutrasnjeg toka.
  *
- *   expand            — rekurzivno proširivanje. Za svaki emitovani
+ *   expand            - rekurzivno proširivanje. Za svaki emitovani
  *                       element pokrene novi Publisher, a njegove
- *                       rezultate ponovo "razgranja" — dok ne stane.
+ *                       rezultate ponovo "razgranja" - dok ne stane.
  *                       Klasičan primer: PAGINACIJA, obilazak stabla.
  */
 public class FlatMapFamily {
@@ -33,24 +33,24 @@ public class FlatMapFamily {
     private static final DateTimeFormatter HHMMSS = DateTimeFormatter.ofPattern("HH:mm:ss.SSS");
 
     public static void main(String[] args) {
-        System.out.println("=== 1. flatMapMany — Mono → Flux ===\n");
+        System.out.println("=== 1. flatMapMany - Mono → Flux ===\n");
         flatMapManyDemo();
 
-        System.out.println("\n=== 2. flatMapIterable — Flux<List<T>> → Flux<T> ===\n");
+        System.out.println("\n=== 2. flatMapIterable - Flux<List<T>> → Flux<T> ===\n");
         flatMapIterableDemo();
 
-        System.out.println("\n=== 3. expand — paginacija API-ja ===\n");
+        System.out.println("\n=== 3. expand - paginacija API-ja ===\n");
         expandPaginationDemo();
 
-        System.out.println("\n=== 4. expand — BFS obilazak (kategorije sa pod-kategorijama) ===\n");
+        System.out.println("\n=== 4. expand - BFS obilazak (kategorije sa pod-kategorijama) ===\n");
         expandTreeDemo();
     }
 
     // -------------------------------------------------------------------
-    // flatMapMany — Mono na ulazu daje Flux. "Jedan request, vise redova."
+    // flatMapMany - Mono na ulazu daje Flux. "Jedan request, vise redova."
     //
     // Bez flatMapMany morali bismo prvo .flatMap pa onda nekako da
-    // pretvorimo unutrasnji tip — flatMapMany to radi u jednom koraku.
+    // pretvorimo unutrasnji tip - flatMapMany to radi u jednom koraku.
     // -------------------------------------------------------------------
     static void flatMapManyDemo() {
         Mono<String> jednoIme = Mono.just("Ana,Marko,Petar");
@@ -62,7 +62,7 @@ public class FlatMapFamily {
     }
 
     // -------------------------------------------------------------------
-    // flatMapIterable — kad u Flux-u imamo elemente cija je svaka
+    // flatMapIterable - kad u Flux-u imamo elemente cija je svaka
     // vrednost Iterable, i hocemo "ravno" prelivanje.
     //
     // Primer: API vraca stranice (List<Item> po stranici); hocemo
@@ -81,7 +81,7 @@ public class FlatMapFamily {
     }
 
     // -------------------------------------------------------------------
-    // expand — REKURZIVNO prosirivanje. Klasicno za paginaciju:
+    // expand - REKURZIVNO prosirivanje. Klasicno za paginaciju:
     //
     //   1. fetch(page=0) → emit Page0
     //   2. emit Page0 trigeruje expander → fetch(page=1) → emit Page1
@@ -116,7 +116,7 @@ public class FlatMapFamily {
     }
 
     // -------------------------------------------------------------------
-    // expand za stablo — BFS obilazak. Svaki cvor expander vrati
+    // expand za stablo - BFS obilazak. Svaki cvor expander vrati
     // listu svoje dece kao Flux. Idiom za rekurzivnu strukturu bez
     // rucne implementacije BFS-a.
     //

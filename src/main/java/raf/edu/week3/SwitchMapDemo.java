@@ -8,7 +8,7 @@ import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 
 /**
- * Nedelja 3 — switchMap.
+ * Nedelja 3 - switchMap.
  *
  * switchMap je rođak flatMap-a sa jednom KLJUČNOM razlikom:
  *
@@ -22,11 +22,11 @@ import java.time.format.DateTimeFormatter;
  * Klasičan primer: search-as-you-type / autocomplete.
  * Korisnik kuca "Bgrd" → kucne "a" pa "n" pa "j" pa "a".
  * Za svaki novi karakter pravimo HTTP poziv ka backend-u koji vraća
- * sugestije. Stari pozivi su irelevantni — korisnik je promenio upit.
+ * sugestije. Stari pozivi su irelevantni - korisnik je promenio upit.
  * switchMap otkaže prethodni poziv i pokrene novi. Bez switchMap-a,
  * sugestije bi se "pomešale" i pokazale rezultate za stara slova.
  *
- * Drugi tipičan slučaj — UI selekcija:
+ * Drugi tipičan slučaj - UI selekcija:
  *   "izabrao si user-a X" → pokreni Mono&lt;UserDetails&gt;
  *   "izabrao si user-a Y" → otkaži stari fetch, pokreni novi
  */
@@ -35,21 +35,21 @@ public class SwitchMapDemo {
     private static final DateTimeFormatter HHMMSS = DateTimeFormatter.ofPattern("HH:mm:ss.SSS");
 
     public static void main(String[] args) {
-        System.out.println("=== 1. flatMap vs switchMap — ista funkcija, različito ponašanje ===\n");
+        System.out.println("=== 1. flatMap vs switchMap - ista funkcija, različito ponašanje ===\n");
         flatMapVsSwitchMap();
 
-        System.out.println("\n=== 2. switchMap — autocomplete (search-as-you-type) ===\n");
+        System.out.println("\n=== 2. switchMap - autocomplete (search-as-you-type) ===\n");
         autocompleteDemo();
 
-        System.out.println("\n=== 3. switchMap — selekcija u UI, otkazivanje prethodnog fetch-a ===\n");
+        System.out.println("\n=== 3. switchMap - selekcija u UI, otkazivanje prethodnog fetch-a ===\n");
         userSelectionDemo();
 
-        System.out.println("\n=== 4. doOnCancel — kako vidimo da je prethodni tok otkazan ===\n");
+        System.out.println("\n=== 4. doOnCancel - kako vidimo da je prethodni tok otkazan ===\n");
         cancelSignalDemo();
     }
 
     // -------------------------------------------------------------------
-    // Direktno poredjenje. Ista funkcija, isti ulaz — drugacije ponasanje.
+    // Direktno poredjenje. Ista funkcija, isti ulaz - drugacije ponasanje.
     //
     // Ulaz: 1 (brz unutrasnji) → 100ms → 2 (spor) → 100ms → 3 (brz).
     // Unutrasnji tok za N traje 300ms i emituje "rez-N".
@@ -83,11 +83,11 @@ public class SwitchMapDemo {
     }
 
     // -------------------------------------------------------------------
-    // Autocomplete — pravi production pattern.
+    // Autocomplete - pravi production pattern.
     //
     // Tok ulaza simulira sta korisnik kuca: "B", "Be", "Beo", "Beog", "Beogr".
     // Svaki upit pokrece HTTP poziv (simuliran sa delay-em). Poslednji
-    // upit je jedini koji nas zanima — switchMap otkazuje sve prethodne.
+    // upit je jedini koji nas zanima - switchMap otkazuje sve prethodne.
     // -------------------------------------------------------------------
     static void autocompleteDemo() {
         Flux<String> kucanje = Flux.just("B", "Be", "Beo", "Beog", "Beogr")
@@ -100,7 +100,7 @@ public class SwitchMapDemo {
                 .blockLast();
     }
 
-    // Pretraga sugestija traje 250ms — duze nego razmak izmedju karaktera (80ms).
+    // Pretraga sugestija traje 250ms - duze nego razmak izmedju karaktera (80ms).
     // To znaci da pre nego sto stari upit zavrsi, doleti novi, pa switchMap
     // otkazuje stari. Samo poslednji upit ("Beogr") ce zavrsiti.
     static Mono<String> pretraziSugestije(String upit) {
@@ -111,7 +111,7 @@ public class SwitchMapDemo {
     }
 
     // -------------------------------------------------------------------
-    // UI selekcija — korisnik klikne tri usera u nizu. Za svaki bi se
+    // UI selekcija - korisnik klikne tri usera u nizu. Za svaki bi se
     // pokrenuo fetch detalja; ali samo poslednji izbor je zanimljiv.
     // -------------------------------------------------------------------
     static void userSelectionDemo() {
@@ -136,7 +136,7 @@ public class SwitchMapDemo {
     // Bilo kakav resource cleanup (zatvaranje konekcije, otkazivanje
     // upita ka bazi) treba uraditi u doOnCancel ili doFinally.
     //
-    // Ovo nije teorija — production HTTP klijenti (Reactor Netty, ...)
+    // Ovo nije teorija - production HTTP klijenti (Reactor Netty, ...)
     // koriste cancel signal da prekinu i mreznu konekciju.
     // -------------------------------------------------------------------
     static void cancelSignalDemo() {
