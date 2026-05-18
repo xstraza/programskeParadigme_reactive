@@ -123,7 +123,7 @@ public class SchedulerTypesDemo {
     static void viseNitiNa(Scheduler scheduler, String tag) {
         Flux.range(1, 5)
                 .flatMap(n -> Mono.fromCallable(() -> {
-                                    log(tag, "obrada " + n);            // log GDE rad trči
+                                    log(tag, "obrada " + n);            // log GDE se rad izvršava
                                     try { Thread.sleep(100); } catch (InterruptedException ignored) {}
                                     return n;
                                 })
