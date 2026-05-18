@@ -109,21 +109,25 @@ public class SchedulerTypesDemo {
     //   single         -> SVE 5 na single-1 (po definiciji, samo 1 nit)
     //   immediate      -> SVE 5 na main, jer immediate ne prebacuje
     //
-    // pool je više od imena. Single garantuje
-    // serijski rad, immediate ne uvodi nikakvu nit, ostala dva
-    // paralelizuju.
+    // Pool je više od imena. Single garantuje serijski rad, immediate
+    // ne uvodi nikakvu nit, ostala dva paralelizuju.
     //
-    // Stavili smo i Thread.sleep da 5 Mono-a stvarno preklope vreme -
-    // bez sleep-a, prvi bi mogao da završi pre nego drugi krene.
+    // VAŽNO: logujemo UNUTAR Callable-a (gde runnuje), a ne
+    // posle flatMap-a. Razlog: flatMap merger spaja rezultate i
+    // doOnNext bi pokazao nit merger-a, ne worker-a koji je radio
+    // posao. Da bi se videle prave radne niti, log mora biti u Callable.
+    //
+    // Thread.sleep stoji da bi se 5 Mono-a stvarno preklopilo vremenski - bez
+    // sleep-a prvi bi mogao da završi pre nego drugi krene.
     // -------------------------------------------------------------------
     static void viseNitiNa(Scheduler scheduler, String tag) {
         Flux.range(1, 5)
                 .flatMap(n -> Mono.fromCallable(() -> {
+                                    log(tag, "obrada " + n);            // log GDE rad trči
                                     try { Thread.sleep(100); } catch (InterruptedException ignored) {}
                                     return n;
                                 })
                                 .subscribeOn(scheduler))
-                .doOnNext(v -> log(tag, v))
                 .blockLast();
     }
 
