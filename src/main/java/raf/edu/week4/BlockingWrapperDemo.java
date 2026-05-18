@@ -43,8 +43,14 @@ public class BlockingWrapperDemo {
         System.out.println("\n=== 4. Ograničenje paralelizma - flatMap(.., concurrency) ===\n");
         primer4_ogranicenParalelizam();
 
-        System.out.println("\n=== 5. Šta NE raditi - blocking na default niti ===\n");
-        primer5_antipattern();
+        System.out.println("\n=== 5. Polling - interval + flatMap + boundedElastic ===\n");
+        primer5_polling();
+
+        System.out.println("\n=== 6. timeout sa fallback Publisher-om ===\n");
+        primer6_timeoutFallback();
+
+        System.out.println("\n=== 7. Šta NE raditi - blocking na default niti ===\n");
+        primer7_antipattern();
     }
 
     // -------------------------------------------------------------------
@@ -128,6 +134,47 @@ public class BlockingWrapperDemo {
     }
 
     // -------------------------------------------------------------------
+    // Polling pattern - Flux.interval okida fetch svakih N. Svaki fetch
+    // je blocking, pa ide na boundedElastic preko flatMap-a.
+    //
+    // Sa concatMap umesto flatMap-a dobili bismo STROGO serijski polling
+    // (sledeći poll tek kad prethodni završi) - korisno ako ne želimo da
+    // se preklope poll-ovi kad odgovor kasni.
+    //
+    // interval je BESKONAČAN - take(3) je tu samo da demo završi.
+    // -------------------------------------------------------------------
+    static void primer5_polling() {
+        Flux.interval(Duration.ofMillis(400))
+                .take(3)
+                .flatMap(tick -> Mono.fromCallable(() -> blockingFetchStatus(tick))
+                        .subscribeOn(Schedulers.boundedElastic()))
+                .doOnNext(s -> log("status", s))
+                .blockLast();
+    }
+
+    // -------------------------------------------------------------------
+    // timeout(Duration, fallback) - ako primarni izvor ne stigne za
+    // dato vreme, automatski prelazi na rezervni Publisher (bez
+    // exception-a, bez onErrorResume-a).
+    //
+    // Klasičan slučaj: brz API sa kratkim timeout-om + spori ali
+    // pouzdani cache kao backup.
+    // -------------------------------------------------------------------
+    static void primer6_timeoutFallback() {
+        Mono<String> primarni = Mono.fromCallable(() -> blockingFetch("primary-api", 500))
+                .subscribeOn(Schedulers.boundedElastic());
+
+        Mono<String> cache = Mono.fromCallable(() -> blockingFetch("cache", 50))
+                .subscribeOn(Schedulers.boundedElastic());
+
+        String rez = primarni
+                .timeout(Duration.ofMillis(200), cache)
+                .block();
+
+        log("rezultat", rez);   // očekivano "cache" - primarni je trajao 500ms
+    }
+
+    // -------------------------------------------------------------------
     // ANTI-PATTERN: blocking poziv BEZ subscribeOn-a. Izvršava na 'main'
     // niti (ili koj god je u tom trenutku aktivna). Ako je ovo u
     // produkciji na parallel pool-u, **deli sa svim drugim Mono-ima**
@@ -136,7 +183,7 @@ public class BlockingWrapperDemo {
     // U ovom main-u nema posledica jer je program samostalan, ali u
     // pravom servisu (Spring WebFlux) - ovo obara performanse.
     // -------------------------------------------------------------------
-    static void primer5_antipattern() {
+    static void primer7_antipattern() {
         log("info", "BEZ subscribeOn-a:");
 
         Mono.fromCallable(() -> blockingFetchUser(999))
@@ -159,6 +206,12 @@ public class BlockingWrapperDemo {
         log("blocking", "fetch " + name + " (" + ms + "ms blocking)");
         try { Thread.sleep(ms); } catch (InterruptedException ignored) {}
         return name;
+    }
+
+    static String blockingFetchStatus(long tick) {
+        log("blocking", "poll status @" + tick + " (100ms blocking)");
+        try { Thread.sleep(100); } catch (InterruptedException ignored) {}
+        return "status@" + tick + " = OK";
     }
 
     static void log(String tag, Object value) {
