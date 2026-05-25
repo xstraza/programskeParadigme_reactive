@@ -144,9 +144,9 @@ fastFlux
     .subscribe();
 ```
 
-`limitRate(N)` prevodi se na `request(N)` upstream-u, čeka da pojedeš
+`limitRate(N)` prevodi se na `request(N)` upstream-u, čeka da obradimo
 75% (default `lowTide`), zatim traži još. Tako consumer drži
-**konstantnu inventory** - bez burst-a, bez gladi.
+**konstantan inventory** - bez burst-a, bez gladi.
 
 Razlika od `onBackpressure*`:
 
@@ -172,7 +172,7 @@ Flux: ── 1 ── 2 ── 3 ──X── (onError)
 ```
 
 **Ključna razlika od običnih izuzetaka:** kad jednom `onError` prođe,
-tok je gotov. Ne možeš "uhvatiš pa nastaviš dalje" - moraš
+tok je gotov. Ne možemo da "uhvatimo pa nastavimo dalje" - moramo
 **preusmeriti** tok pre nego što greška stigne do `subscribe`-a.
 
 ### Tri pristupa - po efektu
@@ -260,7 +260,7 @@ Flux.range(1, 10)
 // 10, 20, 30, 40, 60, 70, 80, 90, 100  (5 preskočen, tok živi)
 ```
 
-⚠️ `onErrorContinue` ima **suptilnu semantiku** - utiče na **upstream**
+`onErrorContinue` ima **suptilnu semantiku** - utiče na **upstream**
 operatore koji "razumeju" continue (`map`, `flatMap`). Ne svi operatori
 ga poštuju, i pozicija u lancu je bitna. Tim Reactor-a savetuje
 **eksplicitno hvatanje u `flatMap`** kao pouzdaniju alternativu:
@@ -306,7 +306,7 @@ ponovo, blocking pozivi se izvršavaju ponovo.
 mono.retry();        // svaki put kad padne, pretplati se ponovo
 ```
 
-⚠️ Beskonačno. Bez backoff-a. U praksi se **skoro nikad** ne koristi
+**Beskonačno**. Bez backoff-a. U praksi se **skoro nikad** ne koristi
 sam - producer može da padne odmah ponovo i napravimo hot loop.
 
 ### `retry(n)` - sa limitom
@@ -315,8 +315,8 @@ sam - producer može da padne odmah ponovo i napravimo hot loop.
 mono.retry(3);       // do 3 pokušaja, posle se predaje (propagira onError)
 ```
 
-Pokušaji su **odmah** - ako prvi pad iz timeout-a od 5s, drugi takođe
-gore za 5s, treći isto. Sumarno 15s pre fail-a. Bez delay-a između.
+Pokušaji su **odmah** - ako prvi padne iz timeout-a od 5s, drugi takođe
+za 5s, treći isto. Sumarno 15s pre fail-a. Bez delay-a između.
 
 ### `retryWhen` + `Retry.backoff` - produkcijski pattern
 
@@ -570,14 +570,5 @@ postojećih komponenti.
 | [`RetryDemo.java`](RetryDemo.java) | `retry(n)`, `Retry.fixedDelay`, `Retry.backoff` sa jitter-om, filter po tipu greške |
 | [`PracticeTasksForStudents.java`](PracticeTasksForStudents.java) | Zadaci za samostalnu vežbu |
 | [`PracticeTasksSolutions.java`](PracticeTasksSolutions.java) | Rešenja zadataka |
-
----
-
-## Reference
-
-- Reactor Reference Guide - [Backpressure](https://projectreactor.io/docs/core/release/reference/#reactive.backpressure)
-- Reactor Reference Guide - [Error Handling](https://projectreactor.io/docs/core/release/reference/#error.handling)
-- Reactor Reference Guide - [Retrying](https://projectreactor.io/docs/core/release/reference/#_retrying)
-- `Retry` Javadoc - [reactor.util.retry.Retry](https://projectreactor.io/docs/core/release/api/reactor/util/retry/Retry.html)
 
 ---
