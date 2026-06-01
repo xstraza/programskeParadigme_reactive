@@ -19,10 +19,13 @@
 3. [Reaktivno stanje - `Flux.scan`](#3-reaktivno-stanje--fluxscan)
 4. [ETL pipeline - extract / transform / load](#4-etl-pipeline--extract--transform--load)
 5. [Kombinovanje izvora - `zip` + `timeout` + `retry`](#5-kombinovanje-izvora--zip--timeout--retry)
-6. [Praktični saveti](#6-praktični-saveti)
-7. [Brza referenca](#7-brza-referenca)
-8. [Šta dolazi sledeće nedelje](#8-šta-dolazi-sledeće-nedelje)
-9. [Primeri koda i vežbe](#9-primeri-koda-i-vežbe)
+6. [Caching / memoizacija - `cache`](#6-caching--memoizacija--cache)
+7. [Typeahead - `switchMap` + debounce](#7-typeahead--switchmap--debounce)
+8. [Paginacija API-ja - `expand`](#8-paginacija-api-ja--expand)
+9. [Rate limiting / throttling](#9-rate-limiting--throttling)
+10. [Praktični saveti](#10-praktični-saveti)
+11. [Brza referenca](#11-brza-referenca)
+12. [Primeri koda i vežbe](#12-primeri-koda-i-vežbe)
 
 ---
 
@@ -380,7 +383,185 @@ Dva sloja timeout-a:
 
 ---
 
-## 6. Praktični saveti
+## 6. Caching / memoizacija - `cache`
+
+`Mono` i `Flux` su **cold** po default-u: svaki `subscribe` (ili
+`block`) **iznova** pokrene izvor. Za skup poziv (HTTP, DB, teško
+računanje) to znači N subscriber-a = N izvršavanja - čest, tih bug.
+
+```java
+Mono<String> izvor = skupiPoziv();   // cold
+izvor.block();   // izvršavanje #1
+izvor.block();   // izvršavanje #2 (!) - izvor radi PONOVO
+```
+
+`cache()` pretvara izvor u **hot**: prvi subscribe ga pokrene, rezultat
+se zapamti, svi sledeći dobiju zapamćeno bez ponovnog izvršavanja.
+
+```java
+Mono<String> kesirano = skupiPoziv().cache();
+kesirano.block();   // izvršavanje #1
+kesirano.block();   // iz keša - izvor se NE pokreće
+```
+
+### `cache(Duration)` - TTL
+
+Za vrednosti koje se retko menjaju (config, feature-flags): zapamti na
+neko vreme, pa posle isteka osveži pri prvom sledećem subscribe-u.
+
+```java
+Mono<Config> cfg = ucitajConfig().cache(Duration.ofSeconds(30));
+```
+
+### Anti-stampede - dedup paralelnih poziva
+
+Kad N poziva krene **istovremeno** dok izvor još traje, sa `cache()`
+svi dele **jedan** in-flight izvor (kad stigne, svi dobiju isti
+rezultat) - umesto N paralelnih udaraca na servis ("cache stampede").
+
+> **Most ka nedelji 7:** `cache()` je jedan od operatora za hot/cold
+> konverziju, uz `share()`, `replay()`, `publish()`. Sledeće nedelje ih
+> gledamo sistematski.
+
+> **Demo:** [`caching/CachingDemo.java`](caching/CachingDemo.java)
+
+---
+
+## 7. Typeahead - `switchMap` + debounce
+
+"Search-as-you-type": svaki pritisak tastera je događaj, za svaki bismo
+hteli predloge sa servera - ali ne za **svako** slovo (čekaj pauzu) i
+nikad ne prikazuj **zastareo** odgovor (korisnik je kucao dalje dok je
+stari poziv leteo).
+
+### `flatMap` vs `switchMap` - ključna razlika
+
+```java
+//  flatMap: svi inner-pozivi teku PARALELNO. Spor stari upit može da
+//  stigne POSLE novog -> UI "treperi", prikaže zastareo rezultat.
+kucanje().flatMap(this::pretraga).subscribe(ui::render);   // BUG
+
+//  switchMap: čim stigne nov ulaz, prethodni inner-Mono se OTKAZUJE
+//  (cancel) i pretplati se na novi. Uvek samo rezultat za POSLEDNJI upit.
+kucanje().switchMap(this::pretraga).subscribe(ui::render); // tačno
+```
+
+`switchMap` je tačno semantika koju typeahead traži: stari poziv više
+nije relevantan čim korisnik nastavi da kuca.
+
+### Pun pipeline
+
+```java
+ulaz
+    .sampleTimeout(q -> Mono.delay(Duration.ofMillis(150))) // debounce: čekaj pauzu
+    .distinctUntilChanged()                                 // ne traži isti string 2x
+    .filter(q -> q.length() >= 2)                           // ignoriši prekratke upite
+    .switchMap(q -> pretraga(q))                            // otkaži zastarele pozive
+    .subscribe(ui::render);
+```
+
+> `sampleTimeout` je Reactor-ov "debounce": emituj poslednju vrednost
+> tek kad u zadatom roku ništa novo ne stigne. Server se pogađa samo
+> za **stabilizovane** upite, ne za svako slovo.
+
+> **Demo:** [`typeahead/TypeaheadDemo.java`](typeahead/TypeaheadDemo.java)
+
+---
+
+## 8. Paginacija API-ja - `expand`
+
+Realan REST API retko vrati sve odjednom - vraća **stranicu** plus
+pokazivač na sledeću (`nextPage`, `cursor`, `Link: rel=next`). Pošto
+**ne znamo unapred** koliko stranica ima, `Flux.range(1, N)` ne radi.
+Treba rekurzija: "povuci stranicu, ako ima sledeća povuci i nju, dok se
+ne potroše".
+
+`expand()` je tačno taj operator: za svaki emitovani element pozove
+funkciju koja vraća `Publisher` **sledećih** elemenata, i ponavlja to
+rekurzivno dok funkcija ne vrati prazno.
+
+```java
+fetchPage(1)
+    .expand(page -> page.imaSledecu()
+            ? fetchPage(page.sledeca())
+            : Mono.empty())               // prazno = kraj rekurzije
+    .concatMapIterable(Page::stavke)      // Flux<Page> -> Flux<Item>
+    .collectList();
+```
+
+```
+fetchPage(1) --expand--> fetchPage(2) --expand--> ... --> Mono.empty()
+```
+
+### Lenjost - stani ranije
+
+Pošto je tok lenj, `take`/`takeUntil` zaustave `expand` čim imamo
+dovoljno - **preostale stranice se NE povlače**:
+
+```java
+fetchPage(1)
+    .expand(p -> p.imaSledecu() ? fetchPage(p.sledeca()) : Mono.empty())
+    .concatMapIterable(Page::stavke)
+    .take(7);     // GET za stranice koje nisu potrebne nikad se ne pozove
+```
+
+Velika prednost nad imperativnim "učitaj sve pa iseci".
+
+> **Demo:** [`pagination/PaginationDemo.java`](pagination/PaginationDemo.java)
+
+---
+
+## 9. Rate limiting / throttling
+
+Spoljni API ima limit ("max 5 zahteva/s", "max 3 istovremena"). Pucamo
+li brže, dobijamo `429 Too Many Requests`. Reactor ima nekoliko poluga
+da uskladimo brzinu produkcije sa dozvoljenom potrošnjom:
+
+| Polje | Operator | Ograničava |
+|-------|----------|-----------|
+| razmak između elemenata | `delayElements(d)` | **stopu** (1 / d) |
+| broj istovremenih poziva | `flatMap(fn, N)` | **konkurentnost** (N u letu) |
+| precizno req/s | `zipWith(Flux.interval(d))` | **stopu** (token bucket) |
+| prefetch / backpressure | `limitRate(N)` | koliko se traži unapred |
+
+### Fiksna stopa
+
+```java
+Flux.range(1, 5)
+    .delayElements(Duration.ofMillis(200));   // ne brže od 5/s
+```
+
+### Ograničenje konkurentnosti
+
+```java
+Flux.range(1, 6)
+    .flatMap(this::pozovi, 3);   // najviše 3 in-flight poziva odjednom
+```
+
+Ovo ograničava **koliko paralelno**, ne koliko po sekundi - server
+nikad ne vidi više od 3 istovremena zahteva.
+
+### Token bucket - precizno req/s
+
+```java
+Flux<Long> tokeni = Flux.interval(Duration.ofMillis(200));  // 5 tokena/s
+Flux.range(1, 5)
+    .zipWith(tokeni, (req, token) -> req);   // element izlazi tek kad stigne token
+```
+
+`zip` po indeksu pari element sa tikom tajmera - element čeka svoj
+"token" pre emisije. Preciznije od `delayElements` kad izvor već ima
+svoje pauze.
+
+> **Most ka nedelji 5:** `limitRate(N)` je čisti backpressure tuning
+> (koliko operator traži od uzvodnog izvora unapred), ali u praksi ide
+> ruku pod ruku sa rate limiting-om.
+
+> **Demo:** [`ratelimit/RateLimitDemo.java`](ratelimit/RateLimitDemo.java)
+
+---
+
+## 10. Praktični saveti
 
 ### Ne blokiraj na event-loop-u
 
@@ -449,7 +630,7 @@ error, i cancel.
 
 ---
 
-## 7. Brza referenca
+## 11. Brza referenca
 
 ### HTTP klijent
 
@@ -519,22 +700,43 @@ Mono.zip(
 | nadovezi dva `Flux`-a redno | `Flux.concat(a, b)` |
 | pomešaj `Flux`-eve po dolasku | `Flux.merge(a, b)` |
 
+### Caching / memoizacija
+
+```java
+skupiPoziv().cache();                    // zapamti zauvek (cold -> hot)
+skupiPoziv().cache(Duration.ofSeconds(30)); // TTL pa osveži
+// više paralelnih subscriber-a dele JEDAN in-flight izvor (anti-stampede)
+```
+
+### Typeahead
+
+```java
+ulaz.sampleTimeout(q -> Mono.delay(Duration.ofMillis(150)))  // debounce
+    .distinctUntilChanged()
+    .filter(q -> q.length() >= 2)
+    .switchMap(q -> pretraga(q));         // switchMap otkazuje zastarele pozive
+```
+
+### Paginacija
+
+```java
+fetchPage(1)
+    .expand(p -> p.imaSledecu() ? fetchPage(p.sledeca()) : Mono.empty())
+    .concatMapIterable(Page::stavke);
+```
+
+### Rate limiting
+
+| Hoću | Operator |
+|------|----------|
+| ne brže od X/s | `delayElements(d)` |
+| najviše N istovremenih | `flatMap(fn, N)` |
+| tačno N req/s (token bucket) | `zipWith(Flux.interval(d))` |
+| prefetch granica | `limitRate(N)` |
+
 ---
 
-## 8. Šta dolazi sledeće nedelje
-
-Nedelja 7 zatvara semestar:
-
-- **Testiranje** sa `StepVerifier` - kako se piše assert nad tokom?
-- **`VirtualTimeScheduler`** - testiranje koda sa `delay`/`interval` bez
-  realnog čekanja.
-- **Hot vs cold streams**, `share`/`cache`/`replay` na operator-skom
-  nivou.
-- Sveobuhvatne vežbe pred kolokvijum.
-
----
-
-## 9. Primeri koda i vežbe
+## 12. Primeri koda i vežbe
 
 | Fajl | Tema |
 |------|------|
@@ -543,6 +745,10 @@ Nedelja 7 zatvara semestar:
 | [`state/StateHolderDemo.java`](state/StateHolderDemo.java) | `Flux.scan` kao reduktor, Redux-stil obrazac |
 | [`pipeline/EtlPipelineDemo.java`](pipeline/EtlPipelineDemo.java) | ETL: parse → enrich → batch → load, sa error isolation-om |
 | [`combining/CombiningDemo.java`](combining/CombiningDemo.java) | `Mono.zip` + per-service timeout/fallback + overall timeout |
+| [`caching/CachingDemo.java`](caching/CachingDemo.java) | `cache()`, `cache(ttl)`, dedup paralelnih poziva (anti-stampede) |
+| [`typeahead/TypeaheadDemo.java`](typeahead/TypeaheadDemo.java) | `switchMap` vs `flatMap`, `sampleTimeout` debounce, search-as-you-type |
+| [`pagination/PaginationDemo.java`](pagination/PaginationDemo.java) | `expand()` rekurzivna paginacija, lenjo `take` ranije zaustavljanje |
+| [`ratelimit/RateLimitDemo.java`](ratelimit/RateLimitDemo.java) | `delayElements`, `flatMap(n)`, token bucket (`zipWith(interval)`), `limitRate` |
 | [`practice/PracticeTasksForStudents.java`](practice/PracticeTasksForStudents.java) | Zadaci za samostalnu vežbu |
 | [`practice/PracticeTasksSolutions.java`](practice/PracticeTasksSolutions.java) | Rešenja zadataka |
 
